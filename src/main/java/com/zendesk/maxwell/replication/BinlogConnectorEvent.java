@@ -21,7 +21,7 @@ public class BinlogConnectorEvent {
 	private final String gtidSetStr;
 	private final String gtid;
 
-	public BinlogConnectorEvent(Event event, String filename, String gtidSetStr, String gtid, MaxwellOutputConfig outputConfig) {
+	public BinlogConnectorEvent(Event event, String filename, String gtidSetStr, String gtid, MaxwellOutputConfig outputConfig, long markTimeMill) {
 		this.event = event;
 		this.gtidSetStr = gtidSetStr;
 		this.gtid = gtid;
@@ -29,6 +29,9 @@ public class BinlogConnectorEvent {
 		this.nextPosition = new BinlogPosition(gtidSetStr, gtid, hV4.getNextPosition(), filename);
 		this.position = new BinlogPosition(gtidSetStr, gtid, hV4.getPosition(), filename);
 		this.outputConfig = outputConfig;
+
+		//纳秒时间戳
+		this.markTimeMill = markTimeMill;
 	}
 
 	public Event getEvent() {

@@ -31,6 +31,12 @@ public class RowMap implements Serializable {
 	private final String table;
 	private final Long timestampMillis;
 	private final Long timestampSeconds;
+
+	/**
+	 * 添加的顺序时间戳(纳秒)
+	 */
+	private final Long markTimeNanoseconds;
+
 	private final Position position;
 	private Position nextPosition;
 	private String kafkaTopic;
@@ -55,7 +61,7 @@ public class RowMap implements Serializable {
 	private long approximateSize;
 
 	public RowMap(String type, String database, String table, Long timestampMillis, List<String> pkColumns,
-			Position position, Position nextPosition, String rowQuery) {
+			Position position, Position nextPosition, String rowQuery, Long markTimeNanoseconds) {
 		this.rowQuery = rowQuery;
 		this.rowType = type;
 		this.database = database;
@@ -70,11 +76,13 @@ public class RowMap implements Serializable {
 		this.pkColumns = pkColumns;
 		this.suppressed = false;
 		this.approximateSize = 100L; // more or less 100 bytes of overhead
+
+		this.markTimeNanoseconds = markTimeNanoseconds;
 	}
 
 	public RowMap(String type, String database, String table, Long timestampMillis, List<String> pkColumns,
 				  Position nextPosition, String rowQuery) {
-		this(type, database, table, timestampMillis, pkColumns, nextPosition, nextPosition, rowQuery);
+		this(type, database, table, timestampMillis, pkColumns, nextPosition, nextPosition, rowQuery, null);
 	}
 
 	public RowMap(String type, String database, String table, Long timestampMillis, List<String> pkColumns,

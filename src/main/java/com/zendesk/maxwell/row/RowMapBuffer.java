@@ -7,8 +7,10 @@ import java.io.IOException;
 public class RowMapBuffer extends ListWithDiskBuffer<RowMap> {
 	private static long FlushOutputStreamBytes = 10000000;
 	private Long xid;
+	private Long xoffset = 0L;
 	private Long serverId;
 	private Long threadId;
+	private Long schemaId;
 	private long memorySize = 0;
 	private long outputStreamCacheSize = 0;
 	private final long maxMemory;
@@ -21,6 +23,11 @@ public class RowMapBuffer extends ListWithDiskBuffer<RowMap> {
 	public RowMapBuffer(long maxInMemoryElements, long maxMemory) {
 		super(maxInMemoryElements);
 		this.maxMemory = maxMemory;
+	}
+
+	public RowMapBuffer(long maxInMemoryElements, float bufferMemoryUsage) {
+		super(maxInMemoryElements);
+		this.maxMemory = (long) (Runtime.getRuntime().maxMemory() * bufferMemoryUsage);
 	}
 
 	@Override
@@ -54,8 +61,10 @@ public class RowMapBuffer extends ListWithDiskBuffer<RowMap> {
 	public RowMap removeFirst() throws IOException, ClassNotFoundException {
 		RowMap r = super.removeFirst(RowMap.class);
 		r.setXid(this.xid);
+		r.setXoffset(this.xoffset++);
 		r.setServerId(this.serverId);
 		r.setThreadId(this.threadId);
+		r.setSchemaId(this.schemaId);
 
 		return r;
 	}
@@ -70,5 +79,9 @@ public class RowMapBuffer extends ListWithDiskBuffer<RowMap> {
 
 	public void setThreadId(Long threadId) {
 		this.threadId = threadId;
+	}
+
+	public void setSchemaId(Long schemaId) {
+		this.schemaId = schemaId;
 	}
 }

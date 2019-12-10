@@ -4,6 +4,7 @@ import com.zendesk.maxwell.CaseSensitivity;
 import com.zendesk.maxwell.MaxwellMysqlConfig;
 import com.zendesk.maxwell.monitoring.Metrics;
 import com.zendesk.maxwell.monitoring.NoOpMetrics;
+import com.zendesk.maxwell.producer.MaxwellOutputConfig;
 import com.zendesk.maxwell.replication.BinlogConnectorReplicator;
 import com.zendesk.maxwell.replication.BinlogPosition;
 import com.zendesk.maxwell.replication.HeartbeatNotifier;
@@ -30,6 +31,7 @@ public class Recovery {
 	private final String maxwellDatabaseName;
 	private final RecoverySchemaStore schemaStore;
 
+
 	public Recovery(MaxwellMysqlConfig replicationConfig,
 					String maxwellDatabaseName,
 					ConnectionPool replicationConnectionPool,
@@ -42,7 +44,7 @@ public class Recovery {
 		this.maxwellDatabaseName = maxwellDatabaseName;
 	}
 
-	public Position recover() throws Exception {
+	public HeartbeatRowMap recover() throws Exception {
 		String recoveryMsg = String.format(
 			"old-server-id: %d, position: %s",
 			recoveryInfo.serverID,
@@ -53,7 +55,7 @@ public class Recovery {
 		List<BinlogPosition> list = getBinlogInfo();
 		for ( int i = list.size() - 1; i >= 0 ; i-- ) {
 			BinlogPosition binlogPosition = list.get(i);
-			Position position = recoveryInfo.position.withBinlogPosition(binlogPosition);
+			Position position = Position.valueOf(binlogPosition, recoveryInfo.getHeartbeat());
 			Metrics metrics = new NoOpMetrics();
 
 			LOGGER.debug("scanning binlog: " + binlogPosition);
@@ -68,15 +70,17 @@ public class Recovery {
 					position,
 					true,
 					recoveryInfo.clientID,
-					new HeartbeatNotifier()
+					new HeartbeatNotifier(),
+					null,
+					new RecoveryFilter(this.maxwellDatabaseName),
+					new MaxwellOutputConfig(),
+					0.25f // Default memory usage size, not used 
 			);
 
-			replicator.setFilter(new RecoveryFilter(this.maxwellDatabaseName));
-
-			Position p = findHeartbeat(replicator);
-			if ( p != null ) {
-				LOGGER.warn("recovered new master position: " + p);
-				return p;
+			HeartbeatRowMap h = findHeartbeat(replicator);
+			if ( h != null ) {
+				LOGGER.warn("recovered new master position: " + h.getNextPosition());
+				return h;
 			}
 		}
 
@@ -88,16 +92,15 @@ public class Recovery {
 	 * try to find a given heartbeat value from the replicator.
 	 * @return A BinlogPosition where the heartbeat was found, or null if none was found.
 	 */
-	private Position findHeartbeat(Replicator r) throws Exception {
+	private HeartbeatRowMap findHeartbeat(Replicator r) throws Exception {
 		r.startReplicator();
 		for (RowMap row = r.getRow(); row != null ; row = r.getRow()) {
 			if (!(row instanceof HeartbeatRowMap)) {
 				continue;
 			}
 			HeartbeatRowMap heartbeatRow = (HeartbeatRowMap) row;
-			Position heartbeatPosition = heartbeatRow.getPosition();
-			if (heartbeatPosition.getLastHeartbeatRead() == recoveryInfo.getHeartbeat())
-				return heartbeatPosition;
+			if (heartbeatRow.getPosition().getLastHeartbeatRead() == recoveryInfo.getHeartbeat())
+				return heartbeatRow;
 		}
 		return null;
 	}

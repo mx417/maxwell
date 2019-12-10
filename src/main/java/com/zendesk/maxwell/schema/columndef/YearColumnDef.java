@@ -1,25 +1,20 @@
 package com.zendesk.maxwell.schema.columndef;
 
-import com.google.code.or.common.util.MySQLConstants;
+import com.zendesk.maxwell.producer.MaxwellOutputConfig;
 
 import java.sql.Date;
 import java.util.Calendar;
 
 public class YearColumnDef extends ColumnDef {
-	public YearColumnDef(String name, String type, int pos) {
+	public YearColumnDef(String name, String type, short pos) {
 		super(name, type, pos);
 	}
 
 	@Override
-	public boolean matchesMysqlType(int type) {
-		return type == MySQLConstants.TYPE_YEAR;
-	}
-
-	@Override
-	public Object asJSON(Object value) {
+	public Object asJSON(Object value, MaxwellOutputConfig outputConfig) {
 		if ( value instanceof Date ) {
 			Calendar calendar = Calendar.getInstance();
-			calendar.setTime(( java.sql.Date ) value);
+			calendar.setTime(( Date ) value);
 			return calendar.get(Calendar.YEAR);
 		}
 		return value;

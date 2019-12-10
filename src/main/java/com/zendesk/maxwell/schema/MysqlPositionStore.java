@@ -1,14 +1,10 @@
 package com.zendesk.maxwell.schema;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
 import com.zendesk.maxwell.MaxwellConfig;
 import com.zendesk.maxwell.recovery.RecoveryInfo;
@@ -109,7 +105,7 @@ public class MysqlPositionStore {
 		try {
 			s.execute();
 			return thisHeartbeat;
-		} catch ( MySQLIntegrityConstraintViolationException e ) {
+		} catch ( SQLIntegrityConstraintViolationException e ) {
 			throw new DuplicateProcessException("Found heartbeat row for client,position while trying to insert.  Is another maxwell running?");
 		}
 	}
@@ -156,24 +152,37 @@ public class MysqlPositionStore {
 		return lastHeartbeat;
 	}
 
+	private Position positionFromResultSet(ResultSet rs) throws SQLException {
+		if ( !rs.next() )
+			return null;
+
+		String gtid = gtidMode ? rs.getString("gtid_set") : null;
+		BinlogPosition pos = new BinlogPosition(
+			gtid,
+			null,
+			rs.getLong("binlog_position"),
+			rs.getString("binlog_file")
+		);
+
+		return new Position(pos, rs.getLong("last_heartbeat_read"));
+	}
+
+	public Position getLatestFromAnyClient() throws SQLException {
+		try ( Connection c = connectionPool.getConnection() ) {
+			PreparedStatement s = c.prepareStatement("SELECT * from `positions` where server_id = ? ORDER BY last_heartbeat_read desc limit 1");
+			s.setLong(1, serverID);
+
+			return positionFromResultSet(s.executeQuery());
+		}
+	}
+
 	public Position get() throws SQLException {
 		try ( Connection c = connectionPool.getConnection() ) {
 			PreparedStatement s = c.prepareStatement("SELECT * from `positions` where server_id = ? and client_id = ?");
 			s.setLong(1, serverID);
 			s.setString(2, clientID);
 
-			ResultSet rs = s.executeQuery();
-			if ( !rs.next() )
-				return null;
-
-			String gtid = gtidMode ? rs.getString("gtid_set") : null;
-			return new Position(
-				new BinlogPosition(gtid, null,
-					rs.getLong("binlog_position"),
-					rs.getString("binlog_file")
-				),
-				rs.getLong("last_heartbeat_read")
-			);
+			return positionFromResultSet(s.executeQuery());
 		}
 	}
 

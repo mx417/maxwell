@@ -38,7 +38,7 @@ public abstract class AbstractSchemaStore {
 	}
 
 	protected Schema captureSchema() throws SQLException {
-		try(Connection connection = replicationConnectionPool.getConnection()) {
+		try(Connection connection = schemaConnectionPool.getConnection()) {
 			LOGGER.info("Maxwell is capturing initial schema");
 			SchemaCapturer capturer = new SchemaCapturer(connection, caseSensitivity);
 			return capturer.capture();

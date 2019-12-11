@@ -68,7 +68,7 @@ public class MaxwellContext {
 					10,
 					0,
 					10,
-					config.schemaMysql.getConnectionURI(true),
+					config.schemaMysql.getConnectionURI(false),
 					config.schemaMysql.user,
 					config.schemaMysql.password);
 		}
@@ -77,16 +77,16 @@ public class MaxwellContext {
 			config.maxwellMysql.getConnectionURI(false), config.maxwellMysql.user, config.maxwellMysql.password);
 
 		this.maxwellConnectionPool = new ConnectionPool("MaxwellConnectionPool", 10, 0, 10,
-					config.maxwellMysql.getConnectionURI(false), config.maxwellMysql.user, config.maxwellMysql.password);
+					config.maxwellMysql.getConnectionURI(), config.maxwellMysql.user, config.maxwellMysql.password);
 		this.maxwellConnectionPool.setCaching(false);
 
 		if ( this.config.initPosition != null )
 			this.initialPosition = this.config.initPosition;
 
 		if ( this.config.replayMode ) {
-			this.positionStore = new ReadOnlyMysqlPositionStore(this.getSchemaConnectionPool(), this.getServerID(), this.config.clientID, config.gtidMode);
+			this.positionStore = new ReadOnlyMysqlPositionStore(this.getMaxwellConnectionPool(), this.getServerID(), this.config.clientID, config.gtidMode);
 		} else {
-			this.positionStore = new MysqlPositionStore(this.getSchemaConnectionPool(), this.getServerID(), this.config.clientID, config.gtidMode);
+			this.positionStore = new MysqlPositionStore(this.getMaxwellConnectionPool(), this.getServerID(), this.config.clientID, config.gtidMode);
 		}
 
 		this.heartbeatNotifier = new HeartbeatNotifier();
@@ -119,10 +119,6 @@ public class MaxwellContext {
 
 	public Connection getRawMaxwellConnection() throws SQLException {
 		return rawMaxwellConnectionPool.getConnection();
-	}
-
-	public Connection getSchemaConnection() throws SQLException {
-		return schemaConnectionPool.getConnection();
 	}
 
 	public void start() throws IOException {
@@ -355,9 +351,6 @@ public class MaxwellContext {
 				break;
 			case "rabbitmq":
 				this.producer = new RabbitmqProducer(this);
-				break;
-			case "redis":
-				this.producer = new MaxwellRedisProducer(this, this.config.redisPubChannel);
 				break;
 			case "none":
 				this.producer = null;

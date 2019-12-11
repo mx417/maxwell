@@ -8,7 +8,6 @@ import java.util.TimeZone;
 public class DateFormatter {
 	private static SimpleDateFormat makeFormatter(String format, boolean utc) {
 		SimpleDateFormat dateFormatter = new SimpleDateFormat(format);
-		dateFormatter.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"));
 		if ( utc )
 			dateFormatter.setTimeZone(TimeZone.getTimeZone("UTC"));
 
@@ -16,9 +15,9 @@ public class DateFormatter {
 	}
 
 	private static SimpleDateFormat dateFormatter           = makeFormatter("yyyy-MM-dd", false);
-	private static SimpleDateFormat dateUTCFormatter = makeFormatter("yyyy-MM-dd", true);
+	private static SimpleDateFormat dateUTCFormatter        = makeFormatter("yyyy-MM-dd", true);
 	private static SimpleDateFormat dateTimeFormatter       = makeFormatter("yyyy-MM-dd HH:mm:ss", false);
-	private static SimpleDateFormat dateTimeUTCFormatter = makeFormatter("yyyy-MM-dd HH:mm:ss", true);
+	private static SimpleDateFormat dateTimeUTCFormatter    = makeFormatter("yyyy-MM-dd HH:mm:ss", true);
 
 	public static Timestamp extractTimestamp(Object value) {
 		if (value instanceof Long) {
@@ -62,10 +61,10 @@ public class DateFormatter {
 		return format(formatter, extractTimestamp(value));
 	}
 
-	public static String formatDateTime(Object value, Timestamp ts, boolean isDateTime) {
+	public static String formatDateTime(Object value, Timestamp ts) {
 		SimpleDateFormat formatter;
 
-		if ( (value instanceof Long) && isDateTime)
+		if ( value instanceof Long )
 			formatter = dateTimeUTCFormatter;
 		else
 			formatter = dateTimeFormatter;

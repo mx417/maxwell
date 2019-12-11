@@ -102,14 +102,7 @@ public class MaxwellConfig extends AbstractConfig {
 	public String rabbitmqExchange;
 	public String rabbitmqExchangeType;
 	public boolean rabbitMqExchangeDurable;
-	public boolean rabbitMqExchangeAutoDelete;
 	public String rabbitmqRoutingKeyTemplate;
-
-	public String redisHost;
-	public int redisPort;
-	public String redisAuth;
-	public int redisDatabase;
-	public String redisPubChannel;
 
 	public MaxwellConfig() { // argv is only null in tests
 		this.kafkaProperties = new Properties();
@@ -176,6 +169,7 @@ public class MaxwellConfig extends AbstractConfig {
 		parser.accepts( "kafka_partition_hash", "default|murmur3, hash function for partitioning").withRequiredArg();
 		parser.accepts( "kafka_topic", "optionally provide a topic name to push to. default: maxwell").withRequiredArg();
 		parser.accepts( "kafka_key_format", "how to format the kafka key; array|hash").withRequiredArg();
+		parser.accepts( "kafka_version", "use kafka 0.8, 0.9, 0.10, 0.10.1, or 0.10.2 producer (default 0.9)").withRequiredArg();
 
 		parser.accepts( "kinesis_stream", "kinesis stream name").withRequiredArg();
 
@@ -231,18 +225,9 @@ public class MaxwellConfig extends AbstractConfig {
 		parser.accepts( "rabbitmq_exchange", "Name of exchange for rabbitmq publisher" ).withRequiredArg();
 		parser.accepts( "rabbitmq_exchange_type", "Exchange type for rabbitmq" ).withRequiredArg();
 		parser.accepts( "rabbitmq_exchange_durable", "Exchange durability. Default is disabled" ).withOptionalArg();
-		parser.accepts( "rabbitmq_exchange_autodelete", "If set, the exchange is deleted when all queues have finished using it. Defaults to false" ).withOptionalArg();
 		parser.accepts( "rabbitmq_routing_key_template", "A string template for the routing key, '%db%' and '%table%' will be substituted. Default is '%db%.%table%'." ).withRequiredArg();
 
 		parser.accepts( "__separator_9" );
-
-		parser.accepts( "redis_host", "Host of Redis server").withRequiredArg();
-		parser.accepts( "redis_port", "Port of Redis server").withRequiredArg();
-		parser.accepts( "redis_auth", "Authentication key for a password-protected Redis server").withRequiredArg();
-		parser.accepts( "redis_database", "Database of Redis server").withRequiredArg();
-		parser.accepts( "redis_pub_channel", "Redis Pub/Sub channel for publishing records").withRequiredArg();
-
-		parser.accepts( "__separator_10" );
 
 		parser.accepts( "metrics_prefix", "the prefix maxwell will apply to all metrics" ).withRequiredArg();
 		parser.accepts( "metrics_type", "how maxwell metrics will be reported, at least one of slf4j|jmx|http|datadog" ).withRequiredArg();
@@ -258,7 +243,7 @@ public class MaxwellConfig extends AbstractConfig {
 		parser.accepts( "http_diagnostic", "enable http diagnostic endpoint: true|false. default: false" ).withOptionalArg();
 		parser.accepts( "http_diagnostic_timeout", "the http diagnostic response timeout in ms when http_diagnostic=true. default: 10000" ).withRequiredArg();
 
-		parser.accepts( "__separator_11" );
+		parser.accepts( "__separator_10" );
 
 		parser.accepts( "help", "display help").forHelp();
 
@@ -315,7 +300,6 @@ public class MaxwellConfig extends AbstractConfig {
 		this.maxwellMysql       = parseMysqlConfig("", options, properties);
 		this.replicationMysql   = parseMysqlConfig("replication_", options, properties);
 		this.schemaMysql        = parseMysqlConfig("schema_", options, properties);
-		this.schemaMysql.database  = fetchOption("schema_database", options, properties, "maxwell");
 		this.gtidMode           = fetchBooleanOption("gtid_mode", options, properties, System.getenv(GTID_MODE_ENV) != null);
 
 		this.databaseName       = fetchOption("schema_database", options, properties, "maxwell");
@@ -347,14 +331,7 @@ public class MaxwellConfig extends AbstractConfig {
 		this.rabbitmqExchange       = fetchOption("rabbitmq_exchange", options, properties, "maxwell");
 		this.rabbitmqExchangeType   = fetchOption("rabbitmq_exchange_type", options, properties, "fanout");
 		this.rabbitMqExchangeDurable = fetchBooleanOption("rabbitmq_exchange_durable", options, properties, false);
-		this.rabbitMqExchangeAutoDelete = fetchBooleanOption("rabbitmq_exchange_autodelete", options, properties, false);
 		this.rabbitmqRoutingKeyTemplate   = fetchOption("rabbitmq_routing_key_template", options, properties, "%db%.%table%");
-
-		this.redisHost			= fetchOption("redis_host", options, properties, "localhost");
-		this.redisPort			= Integer.parseInt(fetchOption("redis_port", options, properties, "6379"));
-		this.redisAuth			= fetchOption("redis_auth", options, properties, null);
-		this.redisDatabase		= Integer.parseInt(fetchOption("redis_database", options, properties, "0"));
-		this.redisPubChannel	= fetchOption("redis_pub_channel", options, properties, "maxwell");
 
 		String kafkaBootstrapServers = fetchOption("kafka.bootstrap.servers", options, properties, null);
 		if ( kafkaBootstrapServers != null )
@@ -467,7 +444,7 @@ public class MaxwellConfig extends AbstractConfig {
 		outputConfig.outputDDL	= fetchBooleanOption("output_ddl", options, properties, false);
 		this.excludeColumns     = fetchOption("exclude_columns", options, properties, null);
 
-		String encryptionMode = fetchOption("encrypt", options, properties, "none");
+		String encryptionMode = fetchOption("encryption", options, properties, "none");
 		switch (encryptionMode) {
 			case "none":
 				outputConfig.encryptionMode = EncryptionMode.ENCRYPT_NONE;

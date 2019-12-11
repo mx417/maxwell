@@ -12,7 +12,7 @@ import java.util.ArrayList;
  */
 public class HeartbeatRowMap extends RowMap {
 	public HeartbeatRowMap(String database, Position position) {
-		super("heartbeat", database, "heartbeats", position.getLastHeartbeatRead(), -1L, new ArrayList<String>(), position);
+		super("heartbeat", database, "heartbeats", position.getLastHeartbeatRead(), new ArrayList<String>(), position);
 	}
 
 	public static HeartbeatRowMap valueOf(String database, Position position) {

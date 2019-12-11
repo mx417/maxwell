@@ -153,16 +153,18 @@ public class Maxwell implements Runnable {
 
 	private void startInner() throws Exception {
 		try ( Connection connection = this.context.getReplicationConnection();
-//		      Connection binlogConnection = this.context.getRawMaxwellConnection();
-			  Connection schemaConnection = this.context.getSchemaConnection()) {
+		      Connection rawConnection = this.context.getRawMaxwellConnection() ) {
 			MaxwellMysqlStatus.ensureReplicationMysqlState(connection);
-//			MaxwellMysqlStatus.ensureMaxwellMysqlState(binlogConnection);
+			MaxwellMysqlStatus.ensureMaxwellMysqlState(rawConnection);
 			if (config.gtidMode) {
 				MaxwellMysqlStatus.ensureGtidMysqlState(connection);
 			}
 
-			SchemaStoreSchema.ensureMaxwellSchema(schemaConnection, this.config.databaseName);
-			SchemaStoreSchema.upgradeSchemaStoreSchema(schemaConnection);
+			SchemaStoreSchema.ensureMaxwellSchema(rawConnection, this.config.databaseName);
+
+			try ( Connection schemaConnection = this.context.getMaxwellConnection() ) {
+				SchemaStoreSchema.upgradeSchemaStoreSchema(schemaConnection);
+			}
 		}
 
 		AbstractProducer producer = this.context.getProducer();

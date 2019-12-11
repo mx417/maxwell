@@ -31,11 +31,6 @@ public class RowMap implements Serializable {
 	private final String table;
 	private final Long timestampMillis;
 	private final Long timestampSeconds;
-
-	/**
-	 * 添加的顺序时间戳(纳秒)
-	 */
-	private final Long markTimeNanoseconds;
 	private Position nextPosition;
 
 	private Long xid;
@@ -101,14 +96,13 @@ public class RowMap implements Serializable {
 				}
 			};
 
-	public RowMap(String type, String database, String table, Long timestampMillis, Long markTimeNanoseconds, List<String> pkColumns,
+	public RowMap(String type, String database, String table, Long timestampMillis, List<String> pkColumns,
 			Position nextPosition) {
 		this.rowType = type;
 		this.database = database;
 		this.table = table;
 		this.timestampMillis = timestampMillis;
 		this.timestampSeconds = timestampMillis / 1000;
-		this.markTimeNanoseconds = markTimeNanoseconds;
 		this.data = new LinkedHashMap<>();
 		this.oldData = new LinkedHashMap<>();
 		this.nextPosition = nextPosition;
@@ -262,7 +256,6 @@ public class RowMap implements Serializable {
 		g.writeStringField("table", this.table);
 		g.writeStringField("type", this.rowType);
 		g.writeNumberField("ts", this.timestampSeconds);
-		g.writeNumberField("mts", this.markTimeNanoseconds);
 
 		if ( outputConfig.includesCommitInfo ) {
 			if ( this.xid != null )

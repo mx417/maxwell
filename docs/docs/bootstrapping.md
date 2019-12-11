@@ -12,21 +12,32 @@ option                                        | description
 --database DATABASE                           | mysql database containing the table to bootstrap
 --table TABLE                                 | mysql table to bootstrap
 --where WHERE_CLAUSE                          | where clause to restrict the rows bootstrapped from the specified table
+--client_id CLIENT_ID                         | specify which maxwell instance should perform the bootstrap operation
 
-### Using the maxwell.bootstrap table
+### Starting a table bootstrap
 ***
+You can start a bootstrap using:
+
+```
+bin/maxwell-bootstrap --database fooDB --table barTable
+```
+
+Optionally, you can include a where clause to replay part of the data.
+
+```
+bin/maxwell-bootstrap --database fooDB --table barTable --where "my_date >= '2017-01-07 00:00:00'"
+```
+
 Alternatively you can insert a row in the `maxwell.bootstrap` table to trigger a bootstrap.
 
 ```
 mysql> insert into maxwell.bootstrap (database_name, table_name) values ('fooDB', 'barTable');
 ```
-Optionally, you can include a where clause to replay part of the data.
 
-bin/maxwell-bootstrap --config localhost.properties --database foobar --table test --log_level info
-
-or
-
-bin/maxwell-bootstrap --config localhost.properties --database foobar --table test --where "my_date >= '2017-01-07 00:00:00'" --log_level info
+Note that if a Maxwell client_id has been set you should specify the client id.
+```
+mysql> insert into maxwell.bootstrap (database_name, table_name, client_id) values ('fooDB', 'barTable', 'custom_maxwell_client_id');
+```
 
 ### Async vs Sync bootstrapping
 ***
@@ -60,6 +71,7 @@ Corresponding replication stream output of table `fooDB.barTable`:
 ```
 
 ### Failure Scenarios
+***
 If Maxwell crashes during bootstrapping the next time it runs it will rerun the bootstrap in its entirety - regardless of previous progress.
 If this behavior is not desired, manual updates to the `bootstrap` table are required.
 Specifically, marking the unfinished bootstrap row as 'complete' (`is_complete` = 1) or deleting the row.

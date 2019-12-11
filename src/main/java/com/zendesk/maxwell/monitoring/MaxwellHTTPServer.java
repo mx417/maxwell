@@ -14,6 +14,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 import static com.zendesk.maxwell.monitoring.MaxwellMetrics.reportingTypeHttp;
 
@@ -27,8 +29,9 @@ public class MaxwellHTTPServer {
 		if (metricsRegistries != null || diagnosticContext != null) {
 			LOGGER.info("Maxwell http server starting");
 			int port = context.getConfig().httpPort;
+			String httpBindAddress = context.getConfig().httpBindAddress;
 			String pathPrefix = context.getConfig().httpPathPrefix;
-			MaxwellHTTPServerWorker maxwellHTTPServerWorker = new MaxwellHTTPServerWorker(port, pathPrefix, metricsRegistries, diagnosticContext);
+			MaxwellHTTPServerWorker maxwellHTTPServerWorker = new MaxwellHTTPServerWorker(httpBindAddress, port, pathPrefix, metricsRegistries, diagnosticContext);
 			Thread thread = new Thread(maxwellHTTPServerWorker);
 
 			context.addTask(maxwellHTTPServerWorker);
@@ -66,13 +69,15 @@ public class MaxwellHTTPServer {
 
 class MaxwellHTTPServerWorker implements StoppableTask, Runnable {
 
+	private final String bindAddress;
 	private int port;
 	private final String pathPrefix;
 	private final MaxwellMetrics.Registries metricsRegistries;
 	private final MaxwellDiagnosticContext diagnosticContext;
 	private Server server;
 
-	public MaxwellHTTPServerWorker(int port, String pathPrefix, MaxwellMetrics.Registries metricsRegistries, MaxwellDiagnosticContext diagnosticContext) {
+	public MaxwellHTTPServerWorker(String bindAddress, int port, String pathPrefix, MaxwellMetrics.Registries metricsRegistries, MaxwellDiagnosticContext diagnosticContext) {
+		this.bindAddress = bindAddress;
 		this.port = port;
 		this.pathPrefix = pathPrefix;
 		this.metricsRegistries = metricsRegistries;
@@ -80,12 +85,18 @@ class MaxwellHTTPServerWorker implements StoppableTask, Runnable {
 	}
 
 	public void startServer() throws Exception {
-		this.server = new Server(this.port);
+		if (this.bindAddress != null) {
+			this.server = new Server(new InetSocketAddress(InetAddress.getByName(this.bindAddress), port));
+		}
+		else {
+			this.server = new Server(this.port);
+		}
 		ServletContextHandler handler = new ServletContextHandler(this.server, pathPrefix);
 
 		if (metricsRegistries != null) {
 			// TODO: there is a way to wire these up automagically via the AdminServlet, but it escapes me right now
 			handler.addServlet(new ServletHolder(new MetricsServlet(metricsRegistries.metricRegistry)), "/metrics");
+			handler.addServlet(new ServletHolder(new io.prometheus.client.exporter.MetricsServlet()), "/prometheus");
 			handler.addServlet(new ServletHolder(new HealthCheckServlet(metricsRegistries.healthCheckRegistry)), "/healthcheck");
 			handler.addServlet(new ServletHolder(new PingServlet()), "/ping");
 		}

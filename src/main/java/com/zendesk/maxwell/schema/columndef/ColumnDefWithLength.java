@@ -1,9 +1,6 @@
 package com.zendesk.maxwell.schema.columndef;
 
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.math.BigDecimal;
-import java.math.BigInteger;
+import com.zendesk.maxwell.producer.MaxwellOutputConfig;
 
 public abstract class ColumnDefWithLength extends ColumnDef {
 	protected Long columnLength;
@@ -22,7 +19,7 @@ public abstract class ColumnDefWithLength extends ColumnDef {
 		}
 	};
 
-	public ColumnDefWithLength(String name, String type, int pos, Long columnLength) {
+	public ColumnDefWithLength(String name, String type, short pos, Long columnLength) {
 		super(name, type, pos);
 		if ( columnLength == null )
 			this.columnLength = 0L;
@@ -32,12 +29,12 @@ public abstract class ColumnDefWithLength extends ColumnDef {
 
 	@Override
 	public String toSQL(Object value) {
-		return "'" + formatValue(value) + "'";
+		return "'" + formatValue(value, new MaxwellOutputConfig()) + "'";
 	}
 
 	@Override
-	public Object asJSON(Object value) {
-		return formatValue(value);
+	public Object asJSON(Object value, MaxwellOutputConfig config) {
+		return formatValue(value, config);
 	}
 
 	public Long getColumnLength() { return columnLength ; }
@@ -46,15 +43,7 @@ public abstract class ColumnDefWithLength extends ColumnDef {
 		this.columnLength = length;
 	}
 
-	protected abstract String formatValue(Object value);
-
-	protected static String buildStrFormatForColLength(Long columnLength) {
-		StringBuilder result = threadLocalBuilder.get();
-		result.append("%0");
-		result.append(columnLength);
-		result.append("d");
-		return result.toString();
-	}
+	protected abstract String formatValue(Object value, MaxwellOutputConfig config);
 
 	protected static String appendFractionalSeconds(String value, int nanos, Long columnLength) {
 		if ( columnLength == 0L )
@@ -65,13 +54,15 @@ public abstract class ColumnDefWithLength extends ColumnDef {
 		int divideBy = (int) Math.pow(10, 6 + 3 - columnLength);
 		int fractional = nanos / divideBy;
 
-		String strFractional = String.format(buildStrFormatForColLength(columnLength), fractional);
-
 		StringBuilder result = threadLocalBuilder.get();
 		result.append(value);
 		result.append(".");
-		result.append(strFractional);
 
+		String asStr = String.valueOf(fractional);
+		for ( int i = 0 ; i < columnLength - asStr.length(); i++ )
+			result.append("0");
+
+		result.append(asStr);
 		return result.toString();
 	}
 }

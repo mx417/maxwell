@@ -10,22 +10,17 @@ user=maxwell
 password=maxwell
 
 
-######### general stuff #############
-
-# choose where to produce data to. currently this is one of: stdout|file|kafka|kinesis|pubsub|rabbitmq|redis
+#     *** general ***
+# choose where to produce data to. stdout|file|kafka|kinesis|pubsub|sqs|rabbitmq|redis
 #producer=kafka
-
-# set delivery timeout (including acknowledgement) in milliseconds for a COMMIT row message that has been sent by the producer,
-# where producer is either kafka or kinesis
-# maxwell may be terminated if the timeout has expired, when majority of the COMMIT row messages have been acknowledged
-# set it to 0 to turn off this check
-#producer_ack_timeout=120000 # default 0
 
 # set the log level.  note that you can configure things further in log4j2.xml
 #log_level=DEBUG # [DEBUG, INFO, WARN, ERROR]
 
+# if set, maxwell will look up the scoped environment variables, strip off the prefix and inject the configs
+#env_config_prefix=MAXWELL_
 
-######### mysql stuff ###############
+#     *** mysql ***
 
 # mysql host to connect to
 #host=hostname
@@ -46,22 +41,49 @@ password=maxwell
 # name of the mysql database where maxwell keeps its own state
 #schema_database=maxwell
 
+# whether to use GTID or not for positioning
+#gtid_mode=true
+
+# SSL/TLS options
+# To use VERIFY_CA or VERIFY_IDENTITY, you must set the trust store with Java opts:
+#   -Djavax.net.ssl.trustStore=<truststore> -Djavax.net.ssl.trustStorePassword=<password>
+# or import the MySQL cert into the global Java cacerts.
+# MODE must be one of DISABLED, PREFERRED, REQUIRED, VERIFY_CA, or VERIFY_IDENTITY
+#
+# turns on ssl for the maxwell-store connection, other connections inherit this setting unless specified
+#ssl=DISABLED
+# for binlog-connector
+#replication_ssl=DISABLED
+# for the schema-capture connection, if used
+#schema_ssl=DISABLED
 
 # maxwell can optionally replicate from a different server than where it stores
 # schema and binlog position info.  Specify that different server here:
-#
-#
+
 #replication_host=other
 #replication_user=username
 #replication_password=password
 #replication_port=3306
 
-######### output format stuff ###############
+# This may be useful when using MaxScale's binlog mirroring host.
+# Specifies that Maxwell should capture schema from a different server than
+# it replicates from:
+
+#schema_host=other
+#schema_user=username
+#schema_password=password
+#schema_port=3306
+
+#       *** output format ***
 
 # records include binlog position (default false)
 #output_binlog_position=true
 
-# records output null values (default true)
+# records include a gtid string (default false)
+#output_gtid_position=true
+
+# records include fields with null values (default true).  If this is false,
+# fields where the value is null will be omitted entirely from output.
 #output_nulls=true
 
 # records include server_id (default false)
@@ -70,13 +92,27 @@ password=maxwell
 # records include thread_id (default false)
 #output_thread_id=true
 
+# records include schema_id (default false)
+#output_schema_id=true
+
+# records include row query, binlog option "binlog_rows_query_log_events" must be enabled" (default false)
+#output_row_query=true
+
+# DML records include list of values that make up a row's primary key (default false)
+#output_primary_keys=true
+
+# DML records include list of columns that make up a row's primary key (default false)
+#output_primary_key_columns=true
+
 # records include commit and xid (default true)
 #output_commit_info=true
 
-# produce DDL records to ddl_kafka_topic (default: false)
+# This controls whether maxwell will output JSON information containing
+# DDL (ALTER/CREATE TABLE/ETC) infromation. (default: false)
+# See also: ddl_kafka_topic
 #output_ddl=true
 
-######### kafka stuff ###############
+#       *** kafka ***
 
 # list of kafka brokers
 #kafka.bootstrap.servers=hosta:9092,hostb:9092
@@ -86,11 +122,10 @@ password=maxwell
 # in the latter case 'database' and 'table' will be replaced with the values for the row being processed
 #kafka_topic=maxwell
 
-# kafka topic to write DDL to
+# alternative kafka topic to write DDL (alter/create/drop) to.  Defaults to kafka_topic
 #ddl_kafka_topic=maxwell_ddl
 
-# hash function to use.  "default" is just the JVM's 'hashCode'
-# function.
+# hash function to use.  "default" is just the JVM's 'hashCode' function.
 #kafka_partition_hash=default # [default, murmur3]
 
 # how maxwell writes its kafka key.
@@ -101,40 +136,53 @@ password=maxwell
 # 'array' looks like:
 # ["test","tickets",[{"id":10001}]]
 #
-# currently the default is "hash"
+# default: "hash"
 #kafka_key_format=hash # [hash, array]
 
-# other kafka options.  Anything prefixed "kafka." will get
+# extra kafka options.  Anything prefixed "kafka." will get
 # passed directly into the kafka-producer's config.
-#kafka.batch.size=16384
 
 # a few defaults.
 # These are 0.11-specific. They may or may not work with other versions.
 kafka.compression.type=snappy
 kafka.retries=0
 kafka.acks=1
+#kafka.batch.size=16384
 
-####### producer partitioning #######
-# used by kafka and kinesis
 
-# controls the input input into the hash function.  Note that this defines
-# which transactions keep ordering with respect to each other.  Generally
-# here you're making a trade-off between inter-row consistency and balanced
-# partitions.
-#producer_partition_by=database # [database, table, primary_key, column]
+# kafka+SSL example
+# kafka.security.protocol=SSL
+# kafka.ssl.truststore.location=/var/private/ssl/kafka.client.truststore.jks
+# kafka.ssl.truststore.password=test1234
+# kafka.ssl.keystore.location=/var/private/ssl/kafka.client.keystore.jks
+# kafka.ssl.keystore.password=test1234
+# kafka.ssl.key.password=test1234#
 
-# required when using producer_partition_by=column
-# otherwise the partitioner will revert to table
-# can be a single or multiple columns, e.g. aggregate_id or aggregate_id,event_type
-#producer_partition_columns=
+# controls a heuristic check that maxwell may use to detect messages that
+# we never heard back from.  The heuristic check looks for "stuck" messages, and
+# will timeout maxwell after this many milliseconds.
+#
+# See https://github.com/zendesk/maxwell/blob/master/src/main/java/com/zendesk/maxwell/producer/InflightMessageList.java
+# if you really want to get into it.
+#producer_ack_timeout=120000 # default 0
 
-# required when using producer_partition_by=column
-# the fallback partitioning behavior when the specified column(s) do not exist
-# can be any one of [database, table, primary_key]
+
+#           *** partitioning ***
+
+# What part of the data do we partition by?
+#producer_partition_by=database # [database, table, primary_key, transaction_id, column]
+
+# specify what fields to partition by when using producer_partition_by=column
+# column separated list.
+#producer_partition_columns=id,foo,bar
+
+# when using producer_partition_by=column, partition by this when
+# the specified column(s) don't exist.
 #producer_partition_by_fallback=database
 
-######### kinesis ####################
-kinesis_stream=maxwell
+#            *** kinesis ***
+
+#kinesis_stream=maxwell
 
 # AWS places a 256 unicode character limit on the max key length of a record
 # http://docs.aws.amazon.com/kinesis/latest/APIReference/API_PutRecord.html
@@ -145,13 +193,24 @@ kinesis_stream=maxwell
 # Default: false
 #kinesis_md5_keys=true
 
-######### pub/sub #####################
+#            *** sqs ***
+
+#sqs_queue_uri=aws_sqs_queue_uri
+
+# The sqs producer will need aws credentials configured in the default
+# root folder and file format. Please check below link on how to do it.
+# http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html
+
+#            *** pub/sub ***
+
 #pubsub_project_id=maxwell
 #pubsub_topic=maxwell
 #ddl_pubsub_topic=maxwell_ddl
 
-######### rabbitmq ###################
+#            *** rabbit-mq ***
+
 #rabbitmq_host=rabbitmq_hostname
+#rabbitmq_port=5672
 #rabbitmq_user=guest
 #rabbitmq_pass=guest
 #rabbitmq_virtual_host=/
@@ -160,48 +219,60 @@ kinesis_stream=maxwell
 #rabbitmq_exchange_durable=false
 #rabbitmq_exchange_autodelete=false
 #rabbitmq_routing_key_template=%db%.%table%
+#rabbitmq_message_persistent=false
+#rabbitmq_declare_exchange=true
 
-######### redis ######################
+#           *** redis ***
+
 #redis_host=redis_host
 #redis_port=6379
 #redis_auth=redis_auth
 #redis_database=0
+
+# name of pubsub/list/whatever key to publish to
+#redis_key=maxwell
+
+# this can be static, e.g. 'maxwell', or dynamic, e.g. namespace_%{database}_%{table}
 #redis_pub_channel=maxwell
+# this can be static, e.g. 'maxwell', or dynamic, e.g. namespace_%{database}_%{table}
+#redis_list_key=maxwell
+# this can be static, e.g. 'maxwell', or dynamic, e.g. namespace_%{database}_%{table}
+# Valid values for redis_type = pubsub|lpush. Defaults to pubsub
 
-######### filter stuff ###############
+#redis_type=pubsub
 
-# filter rows out of Maxwell's output.
-# all filters may be given either as literal names, or as java-style regular expressions.
-# This is a literal name: "exclude_tables=tblname".
-# This is a regexp:       "exclude_tables=/tblname_\\d+/"
+#           *** custom producer ***
 
-# include *only* these databases
-#include_dbs=db1,/db\\d+/
+# the fully qualified class name for custom ProducerFactory
+# see the following link for more details.
+# http://maxwells-daemon.io/producers/#custom-producer
+#custom_producer.factory=
 
-# exclude these databases (will override an include)
-#exclude_dbs=db3,/db\\d+/
+# custom producer properties can be configured using the custom_producer.* property namespace
+#custom_producer.custom_prop=foo
 
-# include *only* these tables
-#include_tables=tbl1,/tbl\\d+/
+#          *** filtering ***
 
-# exclude these tables
-#exclude_tables=tbl1,/tbl\\d+/
-
-# exclude these columns
-#exclude_columns=col1,/col\\d+/
-
-# "blacklist" these dbs -- this means maxwell will ignore schema
-# changes happening to these databases.  Can be useful if you have a
-# high-churn schema that you want to completely ignore, but it's
-# a bit dangerous: once you set this option, you must leave it set, or
-# else maxwell will likely blow up.
+# filter rows out of Maxwell's output.  Command separated list of filter-rules, evaluated in sequence.
+# A filter rule is:
+#  <type> ":" <db> "." <tbl> [ "." <col> "=" <col_val> ]
+#  type    ::= [ "include" | "exclude" | "blacklist" ]
+#  db      ::= [ "/regexp/" | "string" | "`string`" | "*" ]
+#  tbl     ::= [ "/regexp/" | "string" | "`string`" | "*" ]
+#  col_val ::= "column_name"
+#  tbl     ::= [ "/regexp/" | "string" | "`string`" | "*" ]
 #
-# All of this is to say: don't set this unless you know what you're doing.
-#blacklist_dbs=db1,/db\\d+/
-#blacklist_tables=table1,table_no
+# See http://maxwells-daemon.io/filtering for more details
 #
+#filter= exclude: *.*, include: foo.*, include: bar.baz, include: foo.bar.col_eg = "value_to_match"
 
-######### encryption ###############
+# javascript filter
+# maxwell can run a bit of javascript for each row if you need very custom filtering/data munging.
+# See http://maxwells-daemon.io/filtering/#javascript_filters for more details
+#
+#javascript=/path/to/javascript_filter_file
+
+#       *** encryption ***
 
 # Encryption mode. Possible values are none, data, and all. (default none)
 #encrypt=none
@@ -209,7 +280,7 @@ kinesis_stream=maxwell
 # Specify the secret key to be used
 #secret_key=RandomInitVector
 
-######## monitoring stuff ###########
+#       *** monitoring ***
 
 # Maxwell collects metrics via dropwizard. These can be exposed through the
 # base logging mechanism (slf4j), JMX, HTTP or pushed to Datadog.
@@ -219,6 +290,9 @@ kinesis_stream=maxwell
 
 # The prefix maxwell will apply to all metrics
 #metrics_prefix=MaxwellMetrics # default MaxwellMetrics
+
+# Enable (dropwizard) JVM metrics, default false
+#metrics_jvm=true
 
 # When metrics_type includes slf4j this is the frequency metrics are emitted to the log, in seconds
 #metrics_slf4j_interval=60
@@ -258,7 +332,7 @@ kinesis_stream=maxwell
 # Diagnostic check timeout in milliseconds, required if diagnostic = true
 #http_diagnostic_timeout=10000 # default 10000
 
-######### misc stuff ###############
+#    *** misc ***
 
 # maxwell's bootstrapping functionality has a couple of modes.
 #

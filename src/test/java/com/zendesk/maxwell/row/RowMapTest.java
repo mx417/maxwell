@@ -67,7 +67,7 @@ public class RowMapTest {
 
 		pKeys.add("first_name");
 
-		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, pKeys, POSITION);
+		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, pKeys, POSITION, -1L);
 
 		rowMap.putData("id", 9001);
 		rowMap.putData("first_name", "foo");

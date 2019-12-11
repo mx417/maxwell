@@ -170,7 +170,7 @@ public class RowMap implements Serializable {
 		g.writeNumberField(FieldNames.TIMESTAMP, this.timestampSeconds);
 
 		//纳秒时间戳
-		g.writeNumberField("mts", this.timestampSeconds);
+		g.writeNumberField("mts", this.markTimeNanoseconds);
 
 		if ( outputConfig.includesCommitInfo ) {
 			if ( this.xid != null )

@@ -79,6 +79,12 @@ public class RowMapDeserializer extends StdDeserializer<RowMap> {
 			throw new ParseException("`ts` is required and cannot be null.");
 		}
 
+		//纳秒时间戳
+		JsonNode mts = node.get("mts");
+		if (mts == null) {
+			throw new ParseException("`mts` is required and cannot be null.");
+		}
+
 		JsonNode xid = node.get("xid");
 		JsonNode commit = node.get("commit");
 		JsonNode data = node.get("data");
@@ -90,7 +96,8 @@ public class RowMapDeserializer extends StdDeserializer<RowMap> {
 				table.asText(),
 				ts.asLong() * 1000,
 				new ArrayList<String>(),
-				null
+				null,
+				mts.asLong()
 		);
 
 		if (xid != null) {

@@ -62,12 +62,17 @@ class BinlogConnectorEventListener implements BinaryLogClient.EventListener {
 
 		//纳秒时间戳
 		long markTimeMill = System.currentTimeMillis();
+
+//		LOGGER.info("1:lastMarkTimeMill:"+lastMarkTimeMill+",	markTimeMill:"+markTimeMill);
+
 		if (lastMarkTimeMill >= markTimeMill){
 			markTimeMill = (lastMarkTimeMill + 1);
 		}
 		lastMarkTimeMill = markTimeMill;
 
-		BinlogConnectorEvent ep = new BinlogConnectorEvent(event, client.getBinlogFilename(), client.getGtidSet(), gtid, outputConfig, lastMarkTimeMill);
+//		LOGGER.info("2:lastMarkTimeMill:"+lastMarkTimeMill+",	markTimeMill:"+markTimeMill);
+
+		BinlogConnectorEvent ep = new BinlogConnectorEvent(event, client.getBinlogFilename(), client.getGtidSet(), gtid, outputConfig, markTimeMill);
 
 		if (ep.isCommitEvent()) {
 			trackMetrics = true;

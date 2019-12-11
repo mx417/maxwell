@@ -247,6 +247,8 @@ public class BinlogConnectorEvent {
 		//纳秒
 		long nanoseconds = this.markTimeMill * 10000;
 
+		System.out.println("markTimeMill:"+this.markTimeMill+",	nanoseconds:"+nanoseconds);
+
 		Position position     = Position.valueOf(this.position, lastHeartbeatRead);
 		Position nextPosition = Position.valueOf(this.nextPosition, lastHeartbeatRead);
 

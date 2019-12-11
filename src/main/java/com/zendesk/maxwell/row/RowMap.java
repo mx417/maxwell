@@ -77,7 +77,20 @@ public class RowMap implements Serializable {
 		this.suppressed = false;
 		this.approximateSize = 100L; // more or less 100 bytes of overhead
 
+		//纳秒时间戳
 		this.markTimeNanoseconds = markTimeNanoseconds;
+	}
+
+	//DDLMap所需，需要修改
+	public RowMap(String type, String database, String table, Long timestampMillis, List<String> pkColumns,
+			Position position, Position nextPosition, String rowQuery) {
+		this(type, database, table, timestampMillis, pkColumns, position, nextPosition, rowQuery, null);
+	}
+
+	//RowMapDeserializer所需，需要修改
+	public RowMap(String type, String database, String table, Long timestampMillis, List<String> pkColumns,
+				  Position nextPosition, Long markTimeNanoseconds) {
+		this(type, database, table, timestampMillis, pkColumns, nextPosition, null,null, markTimeNanoseconds);
 	}
 
 	public RowMap(String type, String database, String table, Long timestampMillis, List<String> pkColumns,
@@ -87,7 +100,7 @@ public class RowMap implements Serializable {
 
 	public RowMap(String type, String database, String table, Long timestampMillis, List<String> pkColumns,
 				  Position nextPosition) {
-		this(type, database, table, timestampMillis, pkColumns, nextPosition, null);
+		this(type, database, table, timestampMillis, pkColumns, nextPosition, null, null);
 	}
 
 	public RowIdentity getRowIdentity() {
@@ -155,6 +168,9 @@ public class RowMap implements Serializable {
 
 		g.writeStringField(FieldNames.TYPE, this.rowType);
 		g.writeNumberField(FieldNames.TIMESTAMP, this.timestampSeconds);
+
+		//纳秒时间戳
+		g.writeNumberField("mts", this.timestampSeconds);
 
 		if ( outputConfig.includesCommitInfo ) {
 			if ( this.xid != null )

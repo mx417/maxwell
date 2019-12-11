@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-# maxwell
-maxwell-源码编译
-=======
 <div id="maxwell-header">
 </div>
 
@@ -54,4 +50,3 @@ metrics collection, search indexing and inter-service communication.
     "old":  {"daemon": "Stanislaw Lem"}
   }
 ```
->>>>>>> 26a34795e52beeb446199ab8e8bb221ef332dae0

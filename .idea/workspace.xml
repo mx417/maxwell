@@ -1,7 +1,49 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="35aef21c-6964-471f-ab92-59c413905a70" name="Default Changelist" comment="" />
+    <list default="true" id="35aef21c-6964-471f-ab92-59c413905a70" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHANGELOG.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bin/maxwell" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.properties.example" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/docs/config.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/docs/encryption.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/docs/producers.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/docs/quickstart.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/maxwell.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/Maxwell.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/MaxwellConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/MaxwellContext.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/bootstrap/SynchronousBootstrapper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/producer/AbstractAsyncProducer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/producer/AbstractProducer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/producer/KafkaProducerDiagnostic.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/producer/RabbitmqProducer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/replication/AbstractRowsEvent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/replication/BinlogConnectorEvent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/replication/BinlogConnectorEventListener.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/replication/BinlogConnectorReplicator.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/row/HeartbeatRowMap.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/row/RawJSONString.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/row/RowMap.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/row/RowMapDeserializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/schema/AbstractSchemaStore.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/schema/MysqlSchemaStore.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/schema/columndef/DateFormatter.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/schema/columndef/DateTimeColumnDef.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/schema/ddl/DDLMap.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/zendesk/maxwell/producer/KafkaCallbackTest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/zendesk/maxwell/row/RowMapBufferTest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/zendesk/maxwell/row/RowMapTest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/travis.sh" beforeDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -223,13 +265,8 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/src/main/java/com/zendesk/maxwell/row/RowMap.java</url>
-          <line>256</line>
+          <line>258</line>
           <option name="timeStamp" value="3" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/test/java/com/zendesk/maxwell/row/RowMapDeserializerTest.java</url>
-          <line>19</line>
-          <option name="timeStamp" value="4" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>jar://$MAVEN_REPOSITORY$/com/github/shyiko/mysql-binlog-connector-java/0.20.0/mysql-binlog-connector-java-0.20.0-sources.jar!/com/github/shyiko/mysql/binlog/BinaryLogClient.java</url>

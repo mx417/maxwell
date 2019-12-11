@@ -4,7 +4,6 @@ import com.zendesk.maxwell.schema.Table;
 
 public class ColumnPosition {
 	enum Position { FIRST, AFTER, DEFAULT };
-	public static final int AFTER_NOT_FOUND = -999;
 
 	public Position position;
 	public String afterColumn;
@@ -13,7 +12,7 @@ public class ColumnPosition {
 		this.position = Position.DEFAULT;
 	}
 
-	public int index(Table t, Integer defaultIndex) {
+	public int index(Table t, Integer defaultIndex) throws InvalidSchemaError {
 		switch(position) {
 		case FIRST:
 			return 0;
@@ -25,11 +24,8 @@ public class ColumnPosition {
 
 		case AFTER:
 			int afterIdx = t.findColumnIndex(afterColumn);
-
-			// see issue #1216
 			if ( afterIdx == -1 )
-				return AFTER_NOT_FOUND;
-
+				throw new InvalidSchemaError("Could not find column " + afterColumn + " (needed in AFTER statement)");
 			return afterIdx + 1;
 		}
 		return -1;

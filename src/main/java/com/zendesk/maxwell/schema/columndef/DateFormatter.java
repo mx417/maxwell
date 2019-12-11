@@ -1,13 +1,24 @@
 package com.zendesk.maxwell.schema.columndef;
 
+import java.text.SimpleDateFormat;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.Date;
+import java.util.TimeZone;
 
 public class DateFormatter {
-	private static TimeZone UTC_ZONE = TimeZone.getTimeZone("UTC");
-	private static ThreadLocal<Calendar> calendarThreadLocal = ThreadLocal.withInitial(() -> Calendar.getInstance());
-	private static ThreadLocal<Calendar> calendarUTCThreadLocal = ThreadLocal.withInitial(() -> Calendar.getInstance(UTC_ZONE));
-	private static ThreadLocal<StringBuilder> stringBuilderThreadLocal = ThreadLocal.withInitial(() -> new StringBuilder(32));
+	private static SimpleDateFormat makeFormatter(String format, boolean utc) {
+		SimpleDateFormat dateFormatter = new SimpleDateFormat(format);
+		dateFormatter.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"));
+		if ( utc )
+			dateFormatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+		return dateFormatter;
+	}
+
+	private static SimpleDateFormat dateFormatter           = makeFormatter("yyyy-MM-dd", false);
+	private static SimpleDateFormat dateUTCFormatter = makeFormatter("yyyy-MM-dd", true);
+	private static SimpleDateFormat dateTimeFormatter       = makeFormatter("yyyy-MM-dd HH:mm:ss", false);
+	private static SimpleDateFormat dateTimeUTCFormatter = makeFormatter("yyyy-MM-dd HH:mm:ss", true);
 
 	public static Timestamp extractTimestamp(Object value) {
 		if (value instanceof Long) {
@@ -26,90 +37,40 @@ public class DateFormatter {
 			throw new RuntimeException("couldn't extract date/time out of " + value);
 	}
 
-	/*
-		this function is a little roundabout in order to avoid allocations.
-		there's an easier version where we cast val to a string,
-		but it's a bit heavier on the heap.
-	*/
+	private static Timestamp MIN_DATE = Timestamp.valueOf("1000-01-01 00:00:00");
 
-	private static void zeroPad(StringBuilder sb, int val, int width) {
-		int digits;
-		if ( val < 10 )
-			digits = 1;
-		else if ( val < 100 )
-			digits = 2;
-		else if ( val < 1000 )
-			digits = 3;
-		else if ( val < 10000 )
-			digits = 4;
-		else
-			digits = 99999999;
-
-		int padding = width - digits;
-		for (int i = 0; i < padding; i++) {
-			sb.append(0);
+	private static String format(SimpleDateFormat formatter, Timestamp ts) {
+		if ( ts.before(MIN_DATE) ) {
+			return null;
+		} else {
+			synchronized(formatter) {
+					return formatter.format(ts);
+			}
 		}
-		sb.append(val);
-	}
-
-	private static String formatDate(Calendar cal) {
-		StringBuilder sb = stringBuilderThreadLocal.get();
-		sb.setLength(0);
-
-		zeroPad(sb, cal.get(Calendar.YEAR), 4);
-		sb.append("-");
-		zeroPad(sb, cal.get(Calendar.MONTH) + 1, 2);
-		sb.append("-");
-		zeroPad(sb, cal.get(Calendar.DAY_OF_MONTH), 2);
-		return sb.toString();
-
-	}
-
-	private static String formatDateTime(Calendar cal) {
-		StringBuilder sb = stringBuilderThreadLocal.get();
-		sb.setLength(0);
-
-		zeroPad(sb, cal.get(Calendar.YEAR), 4);
-		sb.append("-");
-		zeroPad(sb, cal.get(Calendar.MONTH) + 1, 2);
-		sb.append("-");
-		zeroPad(sb, cal.get(Calendar.DAY_OF_MONTH), 2);
-		sb.append(" ");
-		zeroPad(sb, cal.get(Calendar.HOUR_OF_DAY), 2);
-		sb.append(":");
-		zeroPad(sb, cal.get(Calendar.MINUTE), 2);
-		sb.append(":");
-		zeroPad(sb, cal.get(Calendar.SECOND), 2);
-		return sb.toString();
 	}
 
 	public static String formatDate(Object value) {
-		Calendar cal;
+		SimpleDateFormat formatter;
 
-		if ( value instanceof Long ) {
-			cal = calendarUTCThreadLocal.get();
-			cal.setTimeInMillis(floorDiv((Long) value, 1000L));
-		} else {
-			cal = calendarThreadLocal.get();
-			cal.setTimeInMillis(extractTimestamp(value).getTime());
-		}
+		// if value is a Long, this means it's coming back from shyko's binlog connector
+		// and we should treat it as a UTC timestamp.
+		if ( value instanceof Long )
+			formatter = dateUTCFormatter;
+		else
+			formatter = dateFormatter;
 
-		return formatDate(cal);
+		return format(formatter, extractTimestamp(value));
 	}
 
+	public static String formatDateTime(Object value, Timestamp ts, boolean isDateTime) {
+		SimpleDateFormat formatter;
 
-	public static String formatDateTime(Object value, Timestamp ts) {
-		Calendar cal;
+		if ( (value instanceof Long) && isDateTime)
+			formatter = dateTimeUTCFormatter;
+		else
+			formatter = dateTimeFormatter;
 
-		if ( value instanceof Long ) {
-			cal = calendarUTCThreadLocal.get();
-		} else {
-			cal = calendarThreadLocal.get();
-		}
-
-		cal.setTimeInMillis(ts.getTime());
-
-		return formatDateTime(cal);
+		return format(formatter, ts);
 	}
 
 	private static long floorDiv(long a, long b) {

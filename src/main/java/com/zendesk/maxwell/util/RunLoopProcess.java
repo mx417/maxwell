@@ -12,13 +12,6 @@ abstract public class RunLoopProcess implements StoppableTask {
 
 	public void requestStop() {
 		this.taskState.requestStop();
-
-		interrupt();
-	}
-
-	public void interrupt() {
-		if ( this.thread != null )
-			this.thread.interrupt();
 	}
 
 	public void awaitStop(Long timeout) throws TimeoutException {

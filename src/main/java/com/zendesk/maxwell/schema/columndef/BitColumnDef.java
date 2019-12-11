@@ -1,17 +1,22 @@
 package com.zendesk.maxwell.schema.columndef;
 
-import com.zendesk.maxwell.producer.MaxwellOutputConfig;
+import com.google.code.or.common.util.MySQLConstants;
 
 import java.math.BigInteger;
 import java.util.BitSet;
 
 public class BitColumnDef extends ColumnDef {
-	public BitColumnDef(String name, String type, short pos) {
+	public BitColumnDef(String name, String type, int pos) {
 		super(name, type, pos);
 	}
 
 	@Override
-	public Object asJSON(Object value, MaxwellOutputConfig outputConfig) {
+	public boolean matchesMysqlType(int type) {
+		return type == MySQLConstants.TYPE_BIT;
+	}
+
+	@Override
+	public Object asJSON(Object value) {
 		byte[] bytes;
 		if( value instanceof Boolean ){
 			bytes = new byte[]{(byte) (( Boolean ) value ? 1 : 0)};
@@ -49,6 +54,6 @@ public class BitColumnDef extends ColumnDef {
 
 	@Override
 	public String toSQL(Object value) {
-		return asJSON(value, null).toString();
+		return asJSON(value).toString();
 	}
 }

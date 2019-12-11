@@ -3,10 +3,10 @@ package com.zendesk.maxwell.schema.columndef;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 
-import com.zendesk.maxwell.producer.MaxwellOutputConfig;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 
+import com.google.code.or.common.util.MySQLConstants;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +14,8 @@ import org.slf4j.LoggerFactory;
 public class StringColumnDef extends ColumnDef {
 	public String charset;
 
-	public StringColumnDef(String name, String type, short pos, String charset) {
+	static final Logger LOGGER = LoggerFactory.getLogger(StringColumnDef.class);
+	public StringColumnDef(String name, String type, int pos, String charset) {
 		super(name, type, pos);
 		this.charset = charset;
 	}
@@ -30,6 +31,13 @@ public class StringColumnDef extends ColumnDef {
 	public void setDefaultCharset(String e) {
 		if ( this.charset == null )
 		  this.charset = e;
+	}
+
+	@Override
+	public boolean matchesMysqlType(int type) {
+		return type == MySQLConstants.TYPE_BLOB ||
+			   type == MySQLConstants.TYPE_VARCHAR ||
+			   type == MySQLConstants.TYPE_STRING;
 	}
 
 	@Override
@@ -49,11 +57,9 @@ public class StringColumnDef extends ColumnDef {
 		case "utf8": case "utf8mb4":
 			return Charset.forName("UTF-8");
 		case "latin1": case "ascii":
-			return Charset.forName("Windows-1252");
+			return Charset.forName("ISO-8859-1");
 		case "ucs2":
 			return Charset.forName("UTF-16");
-		case "ujis":
-			return Charset.forName("EUC-JP");
 		default:
 			try {
 				return Charset.forName(charset.toLowerCase());
@@ -63,7 +69,7 @@ public class StringColumnDef extends ColumnDef {
 		}
 	}
 	@Override
-	public Object asJSON(Object value, MaxwellOutputConfig config) {
+	public Object asJSON(Object value) {
 
 		if ( value instanceof String ) {
 			return value;

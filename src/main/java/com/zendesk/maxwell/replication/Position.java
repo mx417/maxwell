@@ -15,8 +15,8 @@ public class Position implements Serializable {
 		this.lastHeartbeatRead = lastHeartbeatRead;
 	}
 
-	public static Position valueOf(BinlogPosition binlogPosition, Long lastHeartbeatRead) {
-		return new Position(binlogPosition, lastHeartbeatRead);
+	public Position withBinlogPosition(BinlogPosition position) {
+		return new Position(position, getLastHeartbeatRead());
 	}
 
 	public Position withHeartbeat(long lastHeartbeatRead) {
@@ -38,14 +38,6 @@ public class Position implements Serializable {
 	@Override
 	public String toString() {
 		return "Position[" + binlogPosition + ", lastHeartbeat=" + lastHeartbeatRead + "]";
-	}
-
-	public String toCommandline() {
-		String gtid = binlogPosition.getGtidSetStr();
-		if ( gtid != null )
-			return gtid;
-		else
-			return binlogPosition.getFile() + ":" + binlogPosition.getOffset();
 	}
 
 	@Override

@@ -17,9 +17,7 @@ public abstract class AbstractProducer {
 	protected final Meter succeededMessageMeter;
 	protected final Counter failedMessageCount;
 	protected final Meter failedMessageMeter;
-	protected final Timer messagePublishTimer;
-	protected final Timer messageLatencyTimer;
-	protected final Counter messageLatencySloViolationCount;
+	protected final Timer metricsTimer;
 
 	public AbstractProducer(MaxwellContext context) {
 		this.context = context;
@@ -32,9 +30,7 @@ public abstract class AbstractProducer {
 		this.succeededMessageMeter = metricRegistry.meter(metrics.metricName("messages", "succeeded", "meter"));
 		this.failedMessageCount = metricRegistry.counter(metrics.metricName("messages", "failed"));
 		this.failedMessageMeter = metricRegistry.meter(metrics.metricName("messages", "failed", "meter"));
-		this.messagePublishTimer = metricRegistry.timer(metrics.metricName("message", "publish", "time"));
-		this.messageLatencyTimer = metricRegistry.timer(metrics.metricName("message", "publish", "age"));
-		this.messageLatencySloViolationCount = metricRegistry.counter(metrics.metricName("message", "publish", "age", "slo_violation"));
+		this.metricsTimer = metrics.getRegistry().timer(metrics.metricName("message", "publish", "time"));
 	}
 
 	abstract public void push(RowMap r) throws Exception;

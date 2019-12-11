@@ -1,7 +1,7 @@
 ### Requirements:
 ***
 - JRE 7 or above
-- mysql 5.1, 5.5, 5.6, 5.7, 8
+- mysql 5.1, 5.5, 5.6, 5.7
 - kafka 0.8.2 or greater
 
 ### binlog_row_image=MINIMAL
@@ -39,7 +39,7 @@ Notes:
 ### MySQL binlog connector
 ***
 
-As of 1.11.0, maxwell uses [shyiko/mysql-binlog-connector-java][] as its underlying
+As of 1.10.9, maxwell uses [shyiko/mysql-binlog-connector-java][] as its underlying
 replication library (previously it was opt-in via `--binlog_connector`). This is
 largely compatible with the previous OpenReplicator implementation, but there are some differences:
 

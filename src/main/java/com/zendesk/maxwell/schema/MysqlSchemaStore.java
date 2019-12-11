@@ -2,7 +2,8 @@ package com.zendesk.maxwell.schema;
 
 import com.zendesk.maxwell.CaseSensitivity;
 import com.zendesk.maxwell.MaxwellContext;
-import com.zendesk.maxwell.filtering.Filter;
+import com.zendesk.maxwell.replication.BinlogPosition;
+import com.zendesk.maxwell.MaxwellFilter;
 import com.zendesk.maxwell.replication.Position;
 import com.zendesk.maxwell.schema.ddl.InvalidSchemaError;
 import com.zendesk.maxwell.schema.ddl.ResolvedSchemaChange;
@@ -19,6 +20,7 @@ public class MysqlSchemaStore extends AbstractSchemaStore implements SchemaStore
 	private final ConnectionPool maxwellConnectionPool;
 	private final Position initialPosition;
 	private final boolean readOnly;
+	private final MaxwellFilter filter;
 	private Long serverID;
 
 	private MysqlSavedSchema savedSchema;
@@ -29,10 +31,11 @@ public class MysqlSchemaStore extends AbstractSchemaStore implements SchemaStore
 							Long serverID,
 							Position initialPosition,
 							CaseSensitivity caseSensitivity,
-							Filter filter,
+							MaxwellFilter filter,
 							boolean readOnly) {
 		super(replicationConnectionPool, schemaConnectionPool, caseSensitivity, filter);
 		this.serverID = serverID;
+		this.filter = filter;
 		this.maxwellConnectionPool = maxwellConnectionPool;
 		this.initialPosition = initialPosition;
 		this.readOnly = readOnly;
@@ -57,18 +60,23 @@ public class MysqlSchemaStore extends AbstractSchemaStore implements SchemaStore
 		return savedSchema.getSchema();
 	}
 
-	public Long getSchemaID() throws SchemaStoreException {
-		getSchema();
-		return savedSchema.getSchemaID();
-	}
-
 	private MysqlSavedSchema restoreOrCaptureSchema() throws SchemaStoreException {
-		try {
+		try ( Connection conn = schemaConnectionPool.getConnection() ) {
 			MysqlSavedSchema savedSchema =
-				restore(maxwellConnectionPool, serverID, caseSensitivity, initialPosition);
+				restore(schemaConnectionPool, serverID, caseSensitivity, initialPosition);
 
 			if ( savedSchema == null ) {
-				savedSchema = captureAndSaveSchema();
+				Schema capturedSchema = captureSchema();
+				savedSchema = new MysqlSavedSchema(serverID, caseSensitivity, capturedSchema, initialPosition);
+				if (!readOnly)
+					if (conn.isValid(30)) {
+						savedSchema.save(conn);
+					} else {
+						// The capture time might be long and the conn connection might be closed already. Consulting the pool
+						// again for a new connection
+						Connection newConn = schemaConnectionPool.getConnection();
+						savedSchema.save(newConn);
+					}
 			}
 
 			return savedSchema;
@@ -79,32 +87,9 @@ public class MysqlSchemaStore extends AbstractSchemaStore implements SchemaStore
 		}
 	}
 
-	public MysqlSavedSchema captureAndSaveSchema() throws SQLException {
-		try ( Connection conn = maxwellConnectionPool.getConnection() ) {
-			MysqlSavedSchema savedSchema = new MysqlSavedSchema(serverID, caseSensitivity, captureSchema(), initialPosition);
-			if (!readOnly)
-				if (conn.isValid(30)) {
-					savedSchema.save(conn);
-				} else {
-					// The capture time might be long and the conn connection might be closed already. Consulting the pool
-					// again for a new connection
-					Connection newConn = maxwellConnectionPool.getConnection();
-					savedSchema.save(newConn);
-					newConn.close();
-				}
-			return savedSchema;
-		}
-	}
 
 	public List<ResolvedSchemaChange> processSQL(String sql, String currentDatabase, Position position) throws SchemaStoreException, InvalidSchemaError {
-		List<ResolvedSchemaChange> resolvedSchemaChanges;
-		try {
-			resolvedSchemaChanges = resolveSQL(getSchema(), sql, currentDatabase);
-		} catch (Exception e) {
-			LOGGER.error("Error on bin log position " + position.toString());
-			e.printStackTrace();
-			throw e;
-		}
+		List<ResolvedSchemaChange> resolvedSchemaChanges = resolveSQL(getSchema(), sql, currentDatabase);
 
 		if ( resolvedSchemaChanges.size() > 0 ) {
 			try {
@@ -121,7 +106,7 @@ public class MysqlSchemaStore extends AbstractSchemaStore implements SchemaStore
 		if ( readOnly )
 			return null;
 
-		try (Connection c = maxwellConnectionPool.getConnection()) {
+		try (Connection c = schemaConnectionPool.getConnection()) {
 			this.savedSchema = this.savedSchema.createDerivedSchema(updatedSchema, p, changes);
 			return this.savedSchema.save(c);
 		}
@@ -130,7 +115,7 @@ public class MysqlSchemaStore extends AbstractSchemaStore implements SchemaStore
 	public void clone(Long serverID, Position position) throws SchemaStoreException {
 		List<ResolvedSchemaChange> empty = Collections.emptyList();
 
-		try (Connection c = maxwellConnectionPool.getConnection()) {
+		try (Connection c = schemaConnectionPool.getConnection()) {
 			getSchema();
 
 			MysqlSavedSchema cloned = new MysqlSavedSchema(serverID, caseSensitivity, getSchema(), position, savedSchema.getSchemaID(), empty);

@@ -4,27 +4,25 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutureCallback;
-import com.google.api.core.ApiFutures;
-import com.google.api.gax.batching.BatchingSettings;
-import com.google.api.gax.retrying.RetrySettings;
 import com.google.cloud.pubsub.v1.Publisher;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.ByteString;
-import com.google.pubsub.v1.ProjectTopicName;
 import com.google.pubsub.v1.PubsubMessage;
+import com.google.pubsub.v1.TopicName;
 import com.zendesk.maxwell.MaxwellContext;
 import com.zendesk.maxwell.monitoring.Metrics;
 import com.zendesk.maxwell.replication.Position;
 import com.zendesk.maxwell.row.RowMap;
 import com.zendesk.maxwell.schema.ddl.DDLMap;
+import com.zendesk.maxwell.util.Logging;
 import com.zendesk.maxwell.util.StoppableTask;
 import com.zendesk.maxwell.util.StoppableTaskState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.threeten.bp.Duration;
 
 import java.io.IOException;
+import java.util.Properties;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 class PubsubCallback implements ApiFutureCallback<String> {
@@ -43,7 +41,7 @@ class PubsubCallback implements ApiFutureCallback<String> {
   public PubsubCallback(AbstractAsyncProducer.CallbackCompleter cc,
                         Position position, String json,
                         Counter producedMessageCount, Counter failedMessageCount,
-                        Meter succeededMessageMeter, Meter failedMessageMeter,
+                        Meter producedMessageMeter, Meter failedMessageMeter,
                         MaxwellContext context) {
     this.cc = cc;
     this.position = position;
@@ -100,7 +98,6 @@ public class MaxwellPubsubProducer extends AbstractProducer {
     this.worker = new MaxwellPubsubProducerWorker(context, pubsubProjectId,
                                                   pubsubTopic, ddlPubsubTopic,
                                                   this.queue);
-
     Thread thread = new Thread(this.worker, "maxwell-pubsub-worker");
     thread.setDaemon(true);
     thread.start();
@@ -123,8 +120,8 @@ class MaxwellPubsubProducerWorker
 
   private final String projectId;
   private Publisher pubsub;
-  private final ProjectTopicName topic;
-  private final ProjectTopicName ddlTopic;
+  private final TopicName topic;
+  private final TopicName ddlTopic;
   private Publisher ddlPubsub;
   private final ArrayBlockingQueue<RowMap> queue;
   private Thread thread;
@@ -137,34 +134,14 @@ class MaxwellPubsubProducerWorker
                                      throws IOException {
     super(context);
 
-    // Publish request get triggered based on request size, messages count & time since last publish
-    BatchingSettings batchingSettings =
-    BatchingSettings.newBuilder()
-        .setElementCountThreshold(context.getConfig().pubsubMessageCountBatchSize)
-        .setRequestByteThreshold(context.getConfig().pubsubRequestBytesThreshold)
-        .setDelayThreshold(context.getConfig().pubsubPublishDelayThreshold)
-        .build();
-    
-    // Retry settings control how the publisher handles retryable failures
-    RetrySettings retrySettings =
-        RetrySettings.newBuilder()
-            .setInitialRetryDelay(context.getConfig().pubsubRetryDelay)
-            .setRetryDelayMultiplier(context.getConfig().pubsubRetryDelayMultiplier)
-            .setMaxRetryDelay(context.getConfig().pubsubMaxRetryDelay)
-            .setInitialRpcTimeout(context.getConfig().pubsubInitialRpcTimeout)
-            .setRpcTimeoutMultiplier(context.getConfig().pubsubRpcTimeoutMultiplier)
-            .setMaxRpcTimeout(context.getConfig().pubsubMaxRpcTimeout)
-            .setTotalTimeout(context.getConfig().pubsubTotalTimeout)
-            .build();
-        
     this.projectId = pubsubProjectId;
-    this.topic = ProjectTopicName.of(pubsubProjectId, pubsubTopic);
-    this.pubsub = Publisher.newBuilder(this.topic).setBatchingSettings(batchingSettings).setRetrySettings(retrySettings).build();
+    this.topic = TopicName.create(pubsubProjectId, pubsubTopic);
+    this.pubsub = Publisher.defaultBuilder(this.topic).build();
 
     if ( context.getConfig().outputConfig.outputDDL == true &&
          ddlPubsubTopic != pubsubTopic ) {
-      this.ddlTopic = ProjectTopicName.of(pubsubProjectId, ddlPubsubTopic);
-      this.ddlPubsub = Publisher.newBuilder(this.ddlTopic).build();
+      this.ddlTopic = TopicName.create(pubsubProjectId, ddlPubsubTopic);
+      this.ddlPubsub = Publisher.defaultBuilder(this.ddlTopic).build();
     } else {
       this.ddlTopic = this.topic;
       this.ddlPubsub = this.pubsub;
@@ -203,17 +180,9 @@ class MaxwellPubsubProducerWorker
     PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
 
     if ( r instanceof DDLMap ) {
-	  ApiFuture<String> apiFuture = ddlPubsub.publish(pubsubMessage);
-	  PubsubCallback callback = new PubsubCallback(cc, r.getNextPosition(), message,
-			  this.succeededMessageCount, this.failedMessageCount, this.succeededMessageMeter, this.failedMessageMeter, this.context);
-
-	  ApiFutures.addCallback(apiFuture, callback, MoreExecutors.directExecutor());
+      ddlPubsub.publish(pubsubMessage);
     } else {
-	  ApiFuture<String> apiFuture = pubsub.publish(pubsubMessage);
-	  PubsubCallback callback = new PubsubCallback(cc, r.getNextPosition(), message,
-			  this.succeededMessageCount, this.failedMessageCount, this.succeededMessageMeter, this.failedMessageMeter, this.context);
-
-	  ApiFutures.addCallback(apiFuture, callback, MoreExecutors.directExecutor());
+      pubsub.publish(pubsubMessage);
     }
   }
 

@@ -1,10 +1,15 @@
 package com.zendesk.maxwell.schema.columndef;
 
-import com.zendesk.maxwell.producer.MaxwellOutputConfig;
+import com.google.code.or.common.util.MySQLConstants;
 
 public class DateColumnDef extends ColumnDef {
-	public DateColumnDef(String name, String type, short pos) {
+	public DateColumnDef(String name, String type, int pos) {
 		super(name, type, pos);
+	}
+
+	@Override
+	public boolean matchesMysqlType(int type) {
+		return type == MySQLConstants.TYPE_DATE;
 	}
 
 	@Override
@@ -17,14 +22,7 @@ public class DateColumnDef extends ColumnDef {
 	}
 
 	@Override
-	public Object asJSON(Object value, MaxwellOutputConfig config) {
-		if ( value instanceof Long && (Long) value == Long.MIN_VALUE ) {
-			if ( config.zeroDatesAsNull )
-				return null;
-			else
-				return "0000-00-00";
-		}
-
+	public Object asJSON(Object value) {
 		return DateFormatter.formatDate(value);
 	}
 }

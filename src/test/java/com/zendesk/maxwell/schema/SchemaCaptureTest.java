@@ -16,11 +16,11 @@ import com.zendesk.maxwell.MaxwellTestWithIsolatedServer;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.*;
 
+import com.google.code.or.common.util.MySQLConstants;
 import com.zendesk.maxwell.schema.Database;
 import com.zendesk.maxwell.schema.Schema;
 import com.zendesk.maxwell.schema.SchemaCapturer;
@@ -70,14 +70,6 @@ public class SchemaCaptureTest extends MaxwellTestWithIsolatedServer {
 	}
 
 	@Test
-	public void testTablefilter() throws Exception {
-		SchemaCapturer sc =
-			new SchemaCapturer(server.getConnection(), CaseSensitivity.CASE_SENSITIVE, "shard_1", "ints");
-		Schema schema = sc.capture();
-		assertEquals(1, schema.getDatabases().get(0).getTableList().size());
-	}
-
-	@Test
 	public void testColumns() throws SQLException, InvalidSchemaError {
 		Schema s = capturer.capture();
 
@@ -92,6 +84,9 @@ public class SchemaCaptureTest extends MaxwellTestWithIsolatedServer {
 		assertThat(columns[0], instanceOf(BigIntColumnDef.class));
 		assertThat(columns[0].getName(), is("id"));
 		assertEquals(0, columns[0].getPos());
+
+		assertTrue(columns[0].matchesMysqlType(MySQLConstants.TYPE_LONGLONG));
+		assertFalse(columns[0].matchesMysqlType(MySQLConstants.TYPE_DECIMAL));
 
 		assertThat(columns[1], allOf(notNullValue(), instanceOf(IntColumnDef.class)));
 		assertThat(columns[1].getName(), is("account_id"));
@@ -189,23 +184,5 @@ public class SchemaCaptureTest extends MaxwellTestWithIsolatedServer {
 		assertEquals("\\,", result[5]);
 		assertEquals(",'", result[6]);
 		assertEquals("b", result[7]);
-	}
-
-	private long getUsedMem() {
-		Runtime r = Runtime.getRuntime();
-		return r.totalMemory() - r.freeMemory();
-	}
-
-	@Ignore
-	@Test
-	public void testHugeCaptureMemUsage() throws Exception {
-		Runtime.getRuntime().gc();
-		System.out.println("usage before: " + getUsedMem());
-		generateHugeSchema();
-		Schema s = capturer.capture();
-		Runtime.getRuntime().gc();
-		Runtime.getRuntime().gc();
-		System.out.println("usage after: " + getUsedMem());
-		System.out.println(s.getCharset());
 	}
 }

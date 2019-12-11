@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 import com.zendesk.maxwell.CaseSensitivity;
-import com.zendesk.maxwell.filtering.Filter;
+import com.zendesk.maxwell.MaxwellFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,12 +21,12 @@ public abstract class AbstractSchemaStore {
 	protected final ConnectionPool replicationConnectionPool;
 	protected final ConnectionPool schemaConnectionPool;
 	protected final CaseSensitivity caseSensitivity;
-	private final Filter filter;
+	private final MaxwellFilter filter;
 
 	protected AbstractSchemaStore(ConnectionPool replicationConnectionPool,
 								  ConnectionPool schemaConnectionPool,
 								  CaseSensitivity caseSensitivity,
-								  Filter filter) {
+								  MaxwellFilter filter) {
 		this.replicationConnectionPool = replicationConnectionPool;
 		this.schemaConnectionPool = schemaConnectionPool;
 		this.caseSensitivity = caseSensitivity;
@@ -38,7 +38,7 @@ public abstract class AbstractSchemaStore {
 	}
 
 	protected Schema captureSchema() throws SQLException {
-		try(Connection connection = schemaConnectionPool.getConnection()) {
+		try(Connection connection = replicationConnectionPool.getConnection()) {
 			LOGGER.info("Maxwell is capturing initial schema");
 			SchemaCapturer capturer = new SchemaCapturer(connection, caseSensitivity);
 			return capturer.capture();

@@ -2,7 +2,9 @@ package com.zendesk.maxwell.schema.columndef;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -12,19 +14,20 @@ import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
 import com.zendesk.maxwell.TestWithNameLogging;
-import com.zendesk.maxwell.producer.MaxwellOutputConfig;
 import com.zendesk.maxwell.row.RawJSONString;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.google.code.or.common.util.MySQLConstants;
+
 public class ColumnDefTest extends TestWithNameLogging {
 	private ColumnDef build(String type, boolean signed) {
-		return ColumnDef.build("bar", "", type, (short) 1, signed, null, null);
+		return ColumnDef.build("bar", "", type, 1, signed, null, null);
 	}
 
 	private ColumnDef build(String type, boolean signed, Long columnLength) {
-		return ColumnDef.build("bar", "", type, (short) 1, signed, null, columnLength);
+		return ColumnDef.build("bar", "", type, 1, signed, null, columnLength);
 	}
 
 	@Before
@@ -99,7 +102,7 @@ public class ColumnDefTest extends TestWithNameLogging {
 
 	@Test
 	public void testUTF8String() {
-		ColumnDef d = ColumnDef.build("bar", "utf8", "varchar", (short) 1, false, null, null);
+		ColumnDef d = ColumnDef.build("bar", "utf8", "varchar", 1, false, null, null);
 
 		assertThat(d, instanceOf(StringColumnDef.class));
 		byte input[] = "He∆˚ß∆".getBytes();
@@ -110,7 +113,7 @@ public class ColumnDefTest extends TestWithNameLogging {
 	public void TestUTF8MB4String() {
 		String utf8_4 = "😁";
 
-		ColumnDef d = ColumnDef.build("bar", "utf8mb4", "varchar", (short) 1, false, null, null);
+		ColumnDef d = ColumnDef.build("bar", "utf8mb4", "varchar", 1, false, null, null);
 		byte input[] = utf8_4.getBytes();
 		assertThat(d.toSQL(input), is("'😁'"));
 	}
@@ -119,25 +122,17 @@ public class ColumnDefTest extends TestWithNameLogging {
 	public void TestAsciiString() {
 		byte input[] = new byte[] { (byte) 126, (byte) 126, (byte) 126, (byte) 126 };
 
-		ColumnDef d = ColumnDef.build("bar", "ascii", "varchar", (short) 1, false, null, null);
-		assertThat((String) d.asJSON(input, null), is("~~~~"));
-	}
-
-	@Test
-	public void TestLatin1String() {
-		byte input[] = new byte[] { (byte) 128, (byte) 128, (byte) 128, (byte) 128 };
-
-		ColumnDef d = ColumnDef.build("bar", "latin1", "varchar", (short) 1, false, null, null);
-		assertThat((String) d.asJSON(input, null), is("€€€€"));
+		ColumnDef d = ColumnDef.build("bar", "ascii", "varchar", 1, false, null, null);
+		assertThat((String) d.asJSON(input), is("~~~~"));
 	}
 
 	@Test
 	public void TestStringAsJSON() {
 		byte input[] = new byte[] { (byte) 169, (byte) 169, (byte) 169, (byte) 169 };
 
-		ColumnDef d = ColumnDef.build("bar", "latin1", "varchar", (short) 1, false, null, null);
+		ColumnDef d = ColumnDef.build("bar", "latin1", "varchar", 1, false, null, null);
 
-		assertThat((String) d.asJSON(input, null), is("©©©©"));
+		assertThat((String) d.asJSON(input), is("©©©©"));
 	}
 
 	@Test
@@ -145,9 +140,9 @@ public class ColumnDefTest extends TestWithNameLogging {
 		byte input[] = new byte[] { (byte) 0, (byte) 1, (byte) 0, (byte) 13, (byte) 0, (byte) 11,
 				(byte) 0, (byte) 2, (byte) 0, (byte) 5, (byte) 3, (byte) 0, (byte) 105, (byte) 100 };
 
-		ColumnDef d = ColumnDef.build("bar", "ascii", "json", (short) 1, false, null, null);
+		ColumnDef d = ColumnDef.build("bar", "ascii", "json", 1, false, null, null);
 
-		RawJSONString result = (RawJSONString) d.asJSON(input, null);
+		RawJSONString result = (RawJSONString) d.asJSON(input);
 		assertThat(result.json, is("{\"id\":3}"));
 	}
 
@@ -155,9 +150,9 @@ public class ColumnDefTest extends TestWithNameLogging {
 	public void TestEmptyJSON() {
 		byte input[] = new byte[0];
 
-		ColumnDef d = ColumnDef.build("bar", "ascii", "json", (short) 1, false, null, null);
+		ColumnDef d = ColumnDef.build("bar", "ascii", "json", 1, false, null, null);
 
-		RawJSONString result = (RawJSONString) d.asJSON(input, null);
+		RawJSONString result = (RawJSONString) d.asJSON(input);
 		assertThat(result.json, is("null"));
 	}
 
@@ -166,6 +161,9 @@ public class ColumnDefTest extends TestWithNameLogging {
 		ColumnDef d = build("float", true);
 		assertThat(d, instanceOf(FloatColumnDef.class));
 
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_FLOAT));
+		assertFalse(d.matchesMysqlType(MySQLConstants.TYPE_DOUBLE));
+
 		assertThat(d.toSQL(Float.valueOf(1.2f)), is("1.2"));
 	}
 
@@ -173,6 +171,9 @@ public class ColumnDefTest extends TestWithNameLogging {
 	public void TestDouble() {
 		ColumnDef d = build("double", true);
 		assertThat(d, instanceOf(FloatColumnDef.class));
+
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_DOUBLE));
+		assertFalse(d.matchesMysqlType(MySQLConstants.TYPE_FLOAT));
 
 		String maxDouble = Double.valueOf(Double.MAX_VALUE).toString();
 		assertThat(d.toSQL(Double.valueOf(Double.MAX_VALUE)), is(maxDouble));
@@ -183,6 +184,8 @@ public class ColumnDefTest extends TestWithNameLogging {
 		ColumnDef d = build("time", true);
 		assertThat(d, instanceOf(TimeColumnDef.class));
 
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_TIME));
+
 		Timestamp t = new Timestamp(307653559000L - TimeZone.getDefault().getOffset(307653559000L));
 		assertThat(d.toSQL(t), is("'19:19:19'"));
 	}
@@ -191,6 +194,8 @@ public class ColumnDefTest extends TestWithNameLogging {
 	public void TestTimeWithMillisecTimestamp() throws ParseException {
 		ColumnDef d = build("time", true, 3L);
 		assertThat(d, instanceOf(TimeColumnDef.class));
+
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_TIME));
 
 		Timestamp t = new Timestamp(307653559000L - TimeZone.getDefault().getOffset(307653559000L));
 
@@ -209,6 +214,8 @@ public class ColumnDefTest extends TestWithNameLogging {
 		ColumnDef d = build("time", true, 6L);
 		assertThat(d, instanceOf(TimeColumnDef.class));
 
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_TIME));
+
 		Timestamp t = new Timestamp(307653559000L - TimeZone.getDefault().getOffset(307653559000L));
 
 		t.setNanos(0);
@@ -226,25 +233,18 @@ public class ColumnDefTest extends TestWithNameLogging {
 		ColumnDef d = build("date", true);
 		assertThat(d, instanceOf(DateColumnDef.class));
 
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_DATE));
+
 		Date date = new GregorianCalendar(1979, 10, 1).getTime();
 		assertThat(d.toSQL(date), is("'1979-11-01'"));
 	}
 
 	@Test
-	public void TestDateZeroDates() {
-		ColumnDef d = build("date", true);
-
-		MaxwellOutputConfig config = new MaxwellOutputConfig();
-		config.zeroDatesAsNull = true;
-
-		assertEquals(null, d.asJSON(Long.MIN_VALUE, config));
-	}
-
-
-	@Test
 	public void TestDateTime() throws ParseException {
 		ColumnDef d = build("datetime", true);
 		assertThat(d, instanceOf(DateTimeColumnDef.class));
+
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_DATETIME));
 
 		SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		Date date = simpleDateFormat.parse("1979-10-01 19:19:19");
@@ -252,19 +252,11 @@ public class ColumnDefTest extends TestWithNameLogging {
 	}
 
 	@Test
-	public void TestDateTimeZeroDates() {
-		ColumnDef d = build("datetime", true);
-
-		MaxwellOutputConfig config = new MaxwellOutputConfig();
-		config.zeroDatesAsNull = true;
-
-		assertEquals(null, d.asJSON(Long.MIN_VALUE, config));
-	}
-
-	@Test
 	public void TestDateTimeWithTimestamp() throws ParseException {
 		ColumnDef d = build("datetime", true);
 		assertThat(d, instanceOf(DateTimeColumnDef.class));
+
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_DATETIME));
 
 		Timestamp t = Timestamp.valueOf("1979-10-01 19:19:19");
 		assertThat(d.toSQL(t), is("'1979-10-01 19:19:19'"));
@@ -274,6 +266,8 @@ public class ColumnDefTest extends TestWithNameLogging {
 	public void TestDateTimeWithMillisecprecision() throws ParseException {
 		ColumnDef d = build("datetime", true, 3L);
 		assertThat(d, instanceOf(DateTimeColumnDef.class));
+
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_DATETIME));
 
 		Timestamp t = Timestamp.valueOf("1979-10-01 19:19:19.123");
 		assertThat(d.toSQL(t), is("'1979-10-01 19:19:19.123'"));
@@ -290,12 +284,14 @@ public class ColumnDefTest extends TestWithNameLogging {
 		ColumnDef d = build("datetime", true, 6L);
 		assertThat(d, instanceOf(DateTimeColumnDef.class));
 
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_DATETIME));
+
 		Timestamp t = Timestamp.valueOf("1979-10-01 19:19:19.001000");
-		assertEquals(1000000, t.getNanos());
+		org.junit.Assert.assertEquals(1000000, t.getNanos());
 		assertThat(d.toSQL(t), is("'1979-10-01 19:19:19.001000'"));
 
 		t = Timestamp.valueOf("1979-10-01 19:19:19.000001");
-		assertEquals(1000, t.getNanos());
+		org.junit.Assert.assertEquals(1000, t.getNanos());
 		assertThat(d.toSQL(t), is("'1979-10-01 19:19:19.000001'"));
 
 		t = Timestamp.valueOf("1979-10-01 19:19:19.345678");
@@ -310,6 +306,8 @@ public class ColumnDefTest extends TestWithNameLogging {
 		ColumnDef d = build("timestamp", true);
 		assertThat(d, instanceOf(DateTimeColumnDef.class));
 
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_TIMESTAMP));
+
 		Timestamp t = Timestamp.valueOf("1979-10-01 19:19:19");
 		assertThat(d.toSQL(t), is("'1979-10-01 19:19:19'"));
 	}
@@ -318,6 +316,8 @@ public class ColumnDefTest extends TestWithNameLogging {
 	public void TestTimestampWithMilliSecPrecision() throws ParseException {
 		ColumnDef d = build("timestamp", true, 3L);
 		assertThat(d, instanceOf(DateTimeColumnDef.class));
+
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_TIMESTAMP));
 
 		Timestamp t = Timestamp.valueOf("1979-10-01 19:19:19.123456000");
 		assertThat(d.toSQL(t), is("'1979-10-01 19:19:19.123'"));
@@ -337,6 +337,8 @@ public class ColumnDefTest extends TestWithNameLogging {
 		ColumnDef d = build("timestamp", true, 6L);
 		assertThat(d, instanceOf(DateTimeColumnDef.class));
 
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_TIMESTAMP));
+
 		Timestamp t = Timestamp.valueOf("1979-10-01 19:19:19.123456000");
 		assertThat(d.toSQL(t), is("'1979-10-01 19:19:19.123456'"));
 
@@ -351,6 +353,8 @@ public class ColumnDefTest extends TestWithNameLogging {
 	public void TestBit() {
 		ColumnDef d = build("bit", true);
 		assertThat(d, instanceOf(BitColumnDef.class));
+
+		assertTrue(d.matchesMysqlType(MySQLConstants.TYPE_BIT));
 
 		byte[] b = new byte[]{0x1};
 		assertThat(d.toSQL(b), is("1"));

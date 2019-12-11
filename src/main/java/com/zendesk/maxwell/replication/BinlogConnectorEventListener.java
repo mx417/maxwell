@@ -7,7 +7,6 @@ import com.github.shyiko.mysql.binlog.event.Event;
 import com.github.shyiko.mysql.binlog.event.EventType;
 import com.github.shyiko.mysql.binlog.event.GtidEventData;
 import com.zendesk.maxwell.monitoring.Metrics;
-import com.zendesk.maxwell.producer.MaxwellOutputConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,20 +21,21 @@ class BinlogConnectorEventListener implements BinaryLogClient.EventListener {
 	private final Timer queueTimer;
 	protected final AtomicBoolean mustStop = new AtomicBoolean(false);
 	private final BinaryLogClient client;
-	private final MaxwellOutputConfig outputConfig;
 	private long replicationLag;
 	private String gtid;
+
+	/**
+	 * 上次的时间
+	 */
+	private long lastMarkTimeMill = System.currentTimeMillis();
 
 	public BinlogConnectorEventListener(
 		BinaryLogClient client,
 		BlockingQueue<BinlogConnectorEvent> q,
-		Metrics metrics,
-		MaxwellOutputConfig outputConfig
-	) {
+		Metrics metrics) {
 		this.client = client;
 		this.queue = q;
 		this.queueTimer =  metrics.getRegistry().timer(metrics.metricName("replication", "queue", "time"));
-		this.outputConfig = outputConfig;
 
 		final BinlogConnectorEventListener self = this;
 		metrics.register(metrics.metricName("replication", "lag"), (Gauge<Long>) () -> self.replicationLag);
@@ -54,7 +54,13 @@ class BinlogConnectorEventListener implements BinaryLogClient.EventListener {
 			gtid = ((GtidEventData)event.getData()).getGtid();
 		}
 
-		BinlogConnectorEvent ep = new BinlogConnectorEvent(event, client.getBinlogFilename(), client.getGtidSet(), gtid, outputConfig);
+		long markTimeMill = System.currentTimeMillis();
+		if (lastMarkTimeMill >= markTimeMill){
+			markTimeMill = (lastMarkTimeMill + 1);
+		}
+		lastMarkTimeMill = markTimeMill;
+
+		BinlogConnectorEvent ep = new BinlogConnectorEvent(event, markTimeMill, client.getBinlogFilename(), client.getGtidSet(), gtid);
 
 		if (ep.isCommitEvent()) {
 			trackMetrics = true;

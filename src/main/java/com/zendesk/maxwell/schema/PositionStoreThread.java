@@ -47,6 +47,12 @@ public class PositionStoreThread extends RunLoopProcess implements Runnable {
 	}
 
 	@Override
+	public void requestStop() {
+		super.requestStop();
+		thread.interrupt();
+	}
+
+	@Override
 	protected void beforeStop() {
 		if ( exception == null ) {
 			try {

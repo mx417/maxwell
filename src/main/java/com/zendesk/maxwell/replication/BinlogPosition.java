@@ -85,13 +85,6 @@ public class BinlogPosition implements Serializable {
 			+ "]";
 	}
 
-	public String fullPosition() {
-		String pos = file + ":" + offset;
-		if ( gtidSetStr != null )
-			pos += "[" + gtidSetStr + "]";
-		return pos;
-	}
-
 	public boolean newerThan(BinlogPosition other) {
 		if ( other == null )
 			return true;

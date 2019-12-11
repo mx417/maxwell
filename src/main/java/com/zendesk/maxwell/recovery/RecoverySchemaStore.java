@@ -51,9 +51,4 @@ public class RecoverySchemaStore implements SchemaStore {
 	public List<ResolvedSchemaChange> processSQL(String sql, String currentDatabase, Position position) throws SchemaStoreException, InvalidSchemaError {
 		return new ArrayList<>();
 	}
-
-	@Override
-	public Long getSchemaID() throws SchemaStoreException {
-		return new Long(0);
-	}
 }

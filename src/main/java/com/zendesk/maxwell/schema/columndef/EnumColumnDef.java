@@ -1,10 +1,15 @@
 package com.zendesk.maxwell.schema.columndef;
 
-import com.zendesk.maxwell.producer.MaxwellOutputConfig;
+import com.google.code.or.common.util.MySQLConstants;
 
 public class EnumColumnDef extends EnumeratedColumnDef {
-	public EnumColumnDef(String name, String type, short pos, String[] enumValues) {
+	public EnumColumnDef(String name, String type, int pos, String[] enumValues) {
 		super(name, type, pos, enumValues);
+	}
+
+	@Override
+	public boolean matchesMysqlType(int type) {
+		return type == MySQLConstants.TYPE_ENUM;
 	}
 
 	@Override
@@ -13,7 +18,7 @@ public class EnumColumnDef extends EnumeratedColumnDef {
 	}
 
 	@Override
-	public String asJSON(Object value, MaxwellOutputConfig config) {
+	public String asJSON(Object value) {
 		return asString(value);
 	}
 

@@ -21,7 +21,6 @@ public class MaxwellBootstrapUtilityConfig extends AbstractConfig {
 	public String  tableName;
 	public String  whereClause;
 	public String  log_level;
-	public String  clientID;
 
 	public Long    abortBootstrapID;
 	public Long    monitorBootstrapID;
@@ -46,7 +45,6 @@ public class MaxwellBootstrapUtilityConfig extends AbstractConfig {
 		parser.accepts( "abort", "bootstrap_id to abort" ).withRequiredArg();
 		parser.accepts( "monitor", "bootstrap_id to monitor" ).withRequiredArg();
 		parser.accepts( "__separator_3", "" );
-		parser.accepts( "client_id", "maxwell client to perform the bootstrap" ).withRequiredArg();
 		parser.accepts( "log_level", "log level, one of DEBUG|INFO|WARN|ERROR. default: WARN" ).withRequiredArg();
 		parser.accepts( "host", "mysql host. default: localhost").withRequiredArg();
 		parser.accepts( "user", "mysql username. default: maxwell" ).withRequiredArg();
@@ -95,7 +93,6 @@ public class MaxwellBootstrapUtilityConfig extends AbstractConfig {
 			this.mysql.host = "localhost";
 
 		this.schemaDatabaseName = fetchOption("schema_database", options, properties, "maxwell");
-		this.clientID = fetchOption("client_id", options, properties, "maxwell");
 
         if ( options.has("database") )
 			this.databaseName = (String) options.valueOf("database");

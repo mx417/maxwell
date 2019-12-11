@@ -4,7 +4,6 @@ import com.zendesk.maxwell.MaxwellConfig;
 import com.zendesk.maxwell.MaxwellContext;
 import com.zendesk.maxwell.replication.BinlogPosition;
 import com.zendesk.maxwell.replication.Position;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -35,7 +34,7 @@ public class InflightMessageListTest {
 
 	@Test
 	public void testInOrderCompletion() throws InterruptedException {
-		setupWithInflightRequestTimeout(0);
+		setupWithInflightRequestTimeout(0, 0.1);
 
 		Position ret;
 
@@ -53,7 +52,7 @@ public class InflightMessageListTest {
 
 	@Test
 	public void testOutOfOrderComplete() throws InterruptedException {
-		setupWithInflightRequestTimeout(0);
+		setupWithInflightRequestTimeout(0, 0.1);
 
 		Position ret;
 		InflightMessageList.InflightMessage m;
@@ -69,17 +68,15 @@ public class InflightMessageListTest {
 	}
 
 	@Test
-	public void testMaxwellWillTerminateWhenHeadOfInflightMsgListIsStuckAndCheckTurnedOn() throws InterruptedException {
+	public void testMaxwellWillTerminateWhenHeadOfInflightMsgListIsStuckAndListFullAndMostCompletedAndCheckTurnedOn() throws InterruptedException {
 		// Given
 		long inflightRequestTimeout = 100;
-		setupWithInflightRequestTimeout(inflightRequestTimeout);
+		setupWithInflightRequestTimeout(inflightRequestTimeout, 0.1);
 		list.completeMessage(p2);
-		list.freeSlot(2);
 		Thread.sleep(inflightRequestTimeout + 5);
 
 		// When
 		list.completeMessage(p3);
-		list.freeSlot(3);
 
 		// Then
 		verify(context).terminate(captor.capture());
@@ -89,21 +86,49 @@ public class InflightMessageListTest {
 	@Test
 	public void testMaxwellWillNotTerminateWhenHeadOfInflightMsgListIsStuckAndCheckTurnedOff() throws InterruptedException {
 		// Given
-		setupWithInflightRequestTimeout(0);
+		setupWithInflightRequestTimeout(0, 0.1);
 		list.completeMessage(p2);
-		list.freeSlot(2);
 
 		// When
 		list.completeMessage(p3);
-		list.freeSlot(3);
 
 		// Then
 		verify(context, never()).terminate(any(RuntimeException.class));
 	}
 
 	@Test
-	public void testWaitForSlotWillWaitWhenCapacityIsFull() throws InterruptedException {
-		setupWithInflightRequestTimeout(0);
+	public void testMaxwellWillNotTerminateWhenHeadOfInflightMsgListIsStuckAndListNotFullAndMostCompletedAndCheckTurnedOn() throws InterruptedException {
+		// Given
+		long inflightRequestTimeout = 100;
+		setupWithInflightRequestTimeout(inflightRequestTimeout, 0.1);
+		list.completeMessage(p1);
+		Thread.sleep(inflightRequestTimeout + 5);
+
+		// When
+		list.completeMessage(p3);
+
+		// Then
+		verify(context, never()).terminate(any(RuntimeException.class));
+	}
+
+	@Test
+	public void testMaxwellWillNotTerminateWhenHeadOfInflightMsgListIsStuckAndListFullAndMostCompletedAndCheckTurnedOn() throws InterruptedException {
+		// Given
+		long inflightRequestTimeout = 100;
+		setupWithInflightRequestTimeout(inflightRequestTimeout, 0.9);
+		list.completeMessage(p2);
+		Thread.sleep(inflightRequestTimeout + 5);
+
+		// When
+		list.completeMessage(p3);
+
+		// Then
+		verify(context, never()).terminate(any(RuntimeException.class));
+	}
+
+	@Test
+	public void testAddMessageWillWaitWhenCapacityIsFull() throws InterruptedException {
+		setupWithInflightRequestTimeout(0, 0.1);
 
 		AddMessage addMessage = new AddMessage();
 		Thread add = new Thread(addMessage);
@@ -111,11 +136,11 @@ public class InflightMessageListTest {
 		assertThat("Should never exceed capacity", list.size(), is(capacity));
 
 		long wait = 500;
-		Thread.sleep(wait + 100);
+		Thread.sleep(wait);
 		list.completeMessage(p1);
-		list.freeSlot(1);
 
 		add.join();
+		assertThat("Should never exceed capacity", list.size(), is(capacity));
 		long elapse = addMessage.end - addMessage.start;
 		assertThat("Should have waited message to be completed", elapse, greaterThanOrEqualTo(wait));
 	}
@@ -128,7 +153,7 @@ public class InflightMessageListTest {
 		public void run() {
 			start = System.currentTimeMillis();
 			try {
-				list.waitForSlot();
+				list.addMessage(p4);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -136,17 +161,14 @@ public class InflightMessageListTest {
 		}
 	}
 
-	private void setupWithInflightRequestTimeout(long timeout) throws InterruptedException {
+	private void setupWithInflightRequestTimeout(long timeout, double completePercentageThreshold) throws InterruptedException {
 		context = mock(MaxwellContext.class);
 		MaxwellConfig config = new MaxwellConfig();
 		config.producerAckTimeout = timeout;
 		when(context.getConfig()).thenReturn(config);
-		list = new InflightMessageList(context, capacity);
-		list.waitForSlot();
-		list.addMessage(p1, 0L, 1);
-		list.waitForSlot();
-		list.addMessage(p2, 0L, 2);
-		list.waitForSlot();
-		list.addMessage(p3, 0L, 3);
+		list = new InflightMessageList(context, capacity, completePercentageThreshold);
+		list.addMessage(p1);
+		list.addMessage(p2);
+		list.addMessage(p3);
 	}
 }

@@ -1,7 +1,0 @@
-#!/bin/bash
-
-set -eux
-cd $(dirname $0)
-./build
-(cd site && git add . && git commit -m 'update docs' && git push origin HEAD:gh-pages)
-./clean

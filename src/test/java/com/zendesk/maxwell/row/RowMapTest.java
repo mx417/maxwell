@@ -20,7 +20,7 @@ public class RowMapTest {
 
 	@Test
 	public void testGetDataMaps() throws Exception {
-		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", 1234567890L, -1L, new ArrayList<String>(), null);
+		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", 1234567890L, new ArrayList<String>(), null);
 		rowMap.putData("foo", "bar");
 		rowMap.putOldData("fiz", "buz");
 
@@ -51,7 +51,7 @@ public class RowMapTest {
 	public void testTimestampConversion() throws Exception {
 		long timestampSeconds = 1496712943;
 
-		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, -1L, new ArrayList<String>(), POSITION);
+		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, new ArrayList<String>(), POSITION);
 
 		Assert.assertEquals(timestampSeconds, rowMap.getTimestamp().longValue());
 		Assert.assertEquals(TIMESTAMP_MILLISECONDS, rowMap.getTimestampMillis().longValue());
@@ -70,7 +70,7 @@ public class RowMapTest {
 
 		pKeys.add("name");
 
-		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, -1L, pKeys, POSITION);
+		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, pKeys, POSITION);
 
 		rowMap.putData("id", "9001");
 		rowMap.putData("name", "example");
@@ -87,7 +87,7 @@ public class RowMapTest {
 	@Test
 	public void testPkToJsonHashWithEmptyData() throws Exception {
 
-		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, -1L, new ArrayList<String>(), POSITION);
+		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, new ArrayList<String>(), POSITION);
 
 		String jsonString = rowMap.pkToJson(RowMap.KeyFormat.HASH);
 
@@ -111,7 +111,7 @@ public class RowMapTest {
 
 		Position position = new Position(new BinlogPosition(1L, "binlog-0001"), 0L);
 
-		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, -1L, pKeys, position);
+		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, pKeys, position);
 
 		rowMap.putData("id", "9001");
 		rowMap.putData("name", "example");
@@ -132,7 +132,7 @@ public class RowMapTest {
 
 		pKeys.add("first_name");
 
-		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, -1L, pKeys, POSITION);
+		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, pKeys, POSITION);
 
 		rowMap.putData("id", "9001");
 		rowMap.putData("first_name", "foo");
@@ -158,7 +158,7 @@ public class RowMapTest {
 
 		pKeys.add("first_name");
 
-		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, -1L, pKeys, POSITION);
+		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, pKeys, POSITION);
 
 		rowMap.putData("id", "9001");
 		rowMap.putData("first_name", "foo");
@@ -177,7 +177,7 @@ public class RowMapTest {
 
 	@Test
 	public void testToJSONWithRawJSONData() throws Exception {
-		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, -1L,
+		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS,
 				new ArrayList<String>(), POSITION);
 
 		rowMap.setServerId(7653213L);
@@ -197,7 +197,7 @@ public class RowMapTest {
 
 	@Test
 	public void testToJSONWithListData() throws Exception {
-		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS, -1L,
+		RowMap rowMap = new RowMap("insert", "MyDatabase", "MyTable", TIMESTAMP_MILLISECONDS,
 				new ArrayList<String>(), POSITION);
 
 		rowMap.putData("id", "9001");

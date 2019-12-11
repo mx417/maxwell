@@ -22,7 +22,8 @@ public class DateTimeColumnDef extends ColumnDefWithLength {
 
 	protected String formatValue(Object value) {
 		Timestamp ts = DateFormatter.extractTimestamp(value);
-		String dateString = DateFormatter.formatDateTime(value, ts);
+		boolean isDateTime = getType().equals("datetime") ? true : false;
+		String dateString = DateFormatter.formatDateTime(value, ts, isDateTime);
 		if ( dateString == null )
 			return null;
 		else

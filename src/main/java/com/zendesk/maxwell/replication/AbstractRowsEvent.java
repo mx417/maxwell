@@ -152,6 +152,7 @@ public abstract class AbstractRowsEvent extends AbstractRowEvent {
 				this.database,
 				getTable().getName(),
 				getHeader().getTimestamp(),
+				-1L,
 				table.getPKList(),
 				this.getNextPosition());
 	}

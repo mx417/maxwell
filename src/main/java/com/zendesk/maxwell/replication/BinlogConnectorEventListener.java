@@ -24,6 +24,11 @@ class BinlogConnectorEventListener implements BinaryLogClient.EventListener {
 	private long replicationLag;
 	private String gtid;
 
+	/**
+	 * 上次的时间
+	 */
+	private long lastMarkTimeMill = System.currentTimeMillis();
+
 	public BinlogConnectorEventListener(
 		BinaryLogClient client,
 		BlockingQueue<BinlogConnectorEvent> q,
@@ -49,7 +54,13 @@ class BinlogConnectorEventListener implements BinaryLogClient.EventListener {
 			gtid = ((GtidEventData)event.getData()).getGtid();
 		}
 
-		BinlogConnectorEvent ep = new BinlogConnectorEvent(event, client.getBinlogFilename(), client.getGtidSet(), gtid);
+		long markTimeMill = System.currentTimeMillis();
+		if (lastMarkTimeMill >= markTimeMill){
+			markTimeMill = (lastMarkTimeMill + 1);
+		}
+		lastMarkTimeMill = markTimeMill;
+
+		BinlogConnectorEvent ep = new BinlogConnectorEvent(event, markTimeMill, client.getBinlogFilename(), client.getGtidSet(), gtid);
 
 		if (ep.isCommitEvent()) {
 			trackMetrics = true;

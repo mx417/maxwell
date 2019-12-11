@@ -118,6 +118,7 @@ public class SynchronousBootstrapper extends AbstractBootstrapper {
 				table.getDatabase(),
 				table.getName(),
 				System.currentTimeMillis(),
+				-1L,
 				table.getPKList(),
 				position);
 	}
@@ -140,7 +141,7 @@ public class SynchronousBootstrapper extends AbstractBootstrapper {
 
 	@Override
 	public void resume(AbstractProducer producer, Replicator replicator) throws Exception {
-		try ( Connection connection = context.getMaxwellConnection() ) {
+		try ( Connection connection = context.getSchemaConnection() ) {
 			// This update resets all rows of incomplete bootstraps to their original state.
 			// These updates are treated as fresh bootstrap requests and trigger a restart
 			// of the bootstrap process from the beginning.
